@@ -8,7 +8,13 @@ import {
   EventEmitter
 } from "@angular/core";
 import { prepareProfile } from "selenium-webdriver/firefox";
-import { interval, Subject, BehaviorSubject } from "rxjs";
+import { interval, Subject, BehaviorSubject, Observable } from "rxjs";
+import { takeUntil } from "rxjs/operators";
+import {
+  WebSocketSubject,
+  webSocket,
+  WebSocketSubjectConfig
+} from "rxjs/websocket";
 import { ContextReplacementPlugin } from "webpack";
 
 /**
@@ -38,15 +44,11 @@ console.log("`Barrel` component loaded asynchronously");
     ></canvas>
     <pre>{{ positions$ | async | json }}</pre>
     <router-outlet></router-outlet>
-  `,
-  // <pre #pre></pre>
-  styles: [
-    // ".location {position: absolute; top: var(position$.x) px; left: var(position$.y) px;}"
-  ]
+  `
 })
 export class BarrelComponent implements OnInit, OnDestroy {
-  private clientWebSocket: WebSocket;
-  // private mousemove = new EventEmitter<MouseEvent>();
+  private clientWebSocket$: WebSocketSubject<string>;
+  private readonly destroy$: Subject<void> = new Subject<void>();
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
     HTMLCanvasElement
@@ -73,7 +75,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
   });
 
   public send(): void {
-    this.clientWebSocket.send("messsage from angular");
+    this.clientWebSocket$.next("messsage from angular");
   }
   public X: number;
   public Y: number;
@@ -85,40 +87,34 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
   @HostListener("mousemove", ["$event"])
   onMousemove(event: MouseEvent) {
-    // this.mousemove.emit(event);
-    // this.clientWebSocket.send(`X: ${event.clientX}, Y: ${event.clientY}`);
     this.X = event.clientX;
     this.Y = event.clientY;
   }
 
   public ngOnInit() {
-    this.clientWebSocket = new WebSocket("ws://localhost:8080/wut");
-    this.clientWebSocket.onopen = () => {
-      console.log("this.clientWebSocket.onopen", this.clientWebSocket);
-      console.log("this.clientWebSocket.readyState", "websocketstatus");
-      this.clientWebSocket.send("event-me-from-browser");
+    const config: WebSocketSubjectConfig<string> = {
+      url: "ws://localhost:8080/wut",
+      deserializer: (e: MessageEvent) => e.data
     };
-    this.clientWebSocket.onclose = error => {
-      console.log("this.clientWebSocket.onclose", this.clientWebSocket, error);
-      events("Closing connection");
-    };
-    this.clientWebSocket.onerror = error => {
-      console.log("this.clientWebSocket.onerror", this.clientWebSocket, error);
-      events("An error occured");
-    };
-    this.clientWebSocket.onmessage = error => {
-      // console.log(
-      //   "this.clientWebSocket.onmessage",
-      //   this.clientWebSocket,
-      //   error
-      // );
-      const match: RegExpExecArray | null = this.coordRegex.exec(error.data);
-      if (match) {
-        const [, x, y] = match;
-        this.positions$.next({ x: +x, y: +y });
+    this.clientWebSocket$ = webSocket(config);
+
+    this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
+      msg => {
+        const match: RegExpExecArray | null = this.coordRegex.exec(msg);
+        if (match) {
+          const [, x, y] = match;
+          this.positions$.next({ x: +x, y: +y });
+        }
+        events(msg);
+      },
+      err => {
+        console.error(err);
+      },
+      () => {
+        console.warn("closing connection");
       }
-      events(error.data);
-    };
+    );
+
     const events = responseEvent => {
       if (this.pre) {
         this.pre.nativeElement.innerHTML += responseEvent + "<br>";
@@ -128,7 +124,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
       .pipe()
       .subscribe(() => {
         if (this.X !== this.oldX && this.Y !== this.oldY) {
-          this.clientWebSocket.send(`X: ${this.X}, Y: ${this.Y}`);
+          this.clientWebSocket$.next(`X: ${this.X}, Y: ${this.Y}`);
           this.draw(this.oldX, this.X, this.oldY, this.Y);
         }
         this.oldX = this.X;
@@ -137,7 +133,8 @@ export class BarrelComponent implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
-    this.clientWebSocket.close();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }
 
