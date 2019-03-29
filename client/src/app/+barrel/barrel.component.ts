@@ -8,14 +8,26 @@ import {
   EventEmitter
 } from "@angular/core";
 import { prepareProfile } from "selenium-webdriver/firefox";
-import { interval, Subject, BehaviorSubject, Observable } from "rxjs";
-import { takeUntil } from "rxjs/operators";
+import {
+  interval,
+  Subject,
+  BehaviorSubject,
+  Observable,
+  animationFrameScheduler
+} from "rxjs";
+import {
+  takeUntil,
+  bufferCount,
+  distinctUntilChanged,
+  withLatestFrom
+} from "rxjs/operators";
 import {
   WebSocketSubject,
   webSocket,
   WebSocketSubjectConfig
 } from "rxjs/websocket";
 import { ContextReplacementPlugin } from "webpack";
+import { deflateRaw } from "zlib";
 
 /**
  * We're loading this component asynchronously
@@ -38,8 +50,8 @@ console.log("`Barrel` component loaded asynchronously");
     <div>{{ this.X }}, {{ this.Y }}</div>
     <canvas
       #myCanvas
-      width="400"
-      height="400"
+      width="1000"
+      height="800"
       style="border:1px solid"
     ></canvas>
     <pre>{{ positions$ | async | json }}</pre>
@@ -57,13 +69,13 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.context = this.myCanvas.nativeElement.getContext("2d");
-    this.draw(0, 0, 0, 0);
+    this.draw(0, 0);
   }
 
-  private draw(oldX, x, oldY, y) {
+  private draw(x: number, y: number) {
     const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
-    this.context.moveTo(oldX - left, oldY - top);
-    this.context.lineTo(x - left, y - top);
+    this.context.beginPath();
+    this.context.arc(x - left, y - top, 10, 0, 2 * Math.PI);
     this.context.stroke();
   }
 
@@ -77,19 +89,15 @@ export class BarrelComponent implements OnInit, OnDestroy {
   public send(): void {
     this.clientWebSocket$.next("messsage from angular");
   }
-  public X: number;
-  public Y: number;
-
-  public oldX: number;
-  public oldY: number;
 
   private coordRegex: RegExp = new RegExp("^(\\d+), (\\d+)");
 
   @HostListener("mousemove", ["$event"])
   onMousemove(event: MouseEvent) {
-    this.X = event.clientX;
-    this.Y = event.clientY;
+    this.mouseEvents$.next({ x: event.clientX, y: event.clientY });
   }
+
+  private mouseEvents$: Subject<IPosition> = new Subject<IPosition>();
 
   public ngOnInit() {
     const config: WebSocketSubjectConfig<string> = {
@@ -105,7 +113,6 @@ export class BarrelComponent implements OnInit, OnDestroy {
           const [, x, y] = match;
           this.positions$.next({ x: +x, y: +y });
         }
-        events(msg);
       },
       err => {
         console.error(err);
@@ -115,20 +122,29 @@ export class BarrelComponent implements OnInit, OnDestroy {
       }
     );
 
-    const events = responseEvent => {
-      if (this.pre) {
-        this.pre.nativeElement.innerHTML += responseEvent + "<br>";
-      }
-    };
-    interval(100)
-      .pipe()
-      .subscribe(() => {
-        if (this.X !== this.oldX && this.Y !== this.oldY) {
-          this.clientWebSocket$.next(`X: ${this.X}, Y: ${this.Y}`);
-          this.draw(this.oldX, this.X, this.oldY, this.Y);
+    interval(0, animationFrameScheduler)
+      .pipe(
+        withLatestFrom(this.positions$.pipe(bufferCount(10, 1))),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(([, positions]) => {
+        if (this.context) {
+          this.context.clearRect(0, 0, 1000, 800);
+          positions.forEach(coord => {
+            this.draw(coord.x, coord.y);
+          });
         }
-        this.oldX = this.X;
-        this.oldY = this.Y;
+      });
+
+    this.mouseEvents$
+      .pipe(
+        distinctUntilChanged(
+          (a: IPosition, b: IPosition) => a.x === b.x && a.y === b.y
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(position => {
+        this.clientWebSocket$.next(`X: ${position.x}, Y: ${position.y}`);
       });
   }
 
