@@ -69,10 +69,10 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.context = this.myCanvas.nativeElement.getContext("2d");
-    this.draw(0, 0);
+    this.draw({ x: 0, y: 0 });
   }
 
-  private draw(x: number, y: number) {
+  private draw({ x, y }: IPosition) {
     const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
     this.context.beginPath();
     this.context.arc(x - left, y - top, 10, 0, 2 * Math.PI);
@@ -90,7 +90,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.clientWebSocket$.next("messsage from angular");
   }
 
-  private coordRegex: RegExp = new RegExp("^(\\d+), (\\d+)");
+  private coordRegex: RegExp = new RegExp(", (\\d+), (\\d+)$");
 
   @HostListener("mousemove", ["$event"])
   onMousemove(event: MouseEvent) {
@@ -101,18 +101,22 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
   public ngOnInit() {
     const config: WebSocketSubjectConfig<string> = {
-      url: "ws://localhost:8080/wut",
+      url: "ws://ws00100:8080/wut",
       deserializer: (e: MessageEvent) => e.data
     };
     this.clientWebSocket$ = webSocket(config);
 
     this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
       msg => {
-        const match: RegExpExecArray | null = this.coordRegex.exec(msg);
-        if (match) {
-          const [, x, y] = match;
-          this.positions$.next({ x: +x, y: +y });
-        }
+        let users = msg.split(":");
+        users.forEach(user => {
+          const match: RegExpExecArray | null = this.coordRegex.exec(user);
+          if (match) {
+            console.log(match);
+            const [, x, y] = match;
+            this.positions$.next({ x: +x, y: +y });
+          }
+        });
       },
       err => {
         console.error(err);
@@ -128,11 +132,10 @@ export class BarrelComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe(([, positions]) => {
+        // console.log(positions);
         if (this.context) {
           this.context.clearRect(0, 0, 1000, 800);
-          positions.forEach(coord => {
-            this.draw(coord.x, coord.y);
-          });
+          positions.forEach(pos => this.draw(pos));
         }
       });
 
@@ -144,7 +147,18 @@ export class BarrelComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe(position => {
-        this.clientWebSocket$.next(`X: ${position.x}, Y: ${position.y}`);
+        const {
+          left,
+          top
+        } = this.myCanvas.nativeElement.getBoundingClientRect();
+        if (
+          position.x < left + 1000 &&
+          position.x > left &&
+          position.y < top + 800 &&
+          position.y > top
+        ) {
+          this.clientWebSocket$.next(`X: ${position.x}, Y: ${position.y}`);
+        }
       });
   }
 

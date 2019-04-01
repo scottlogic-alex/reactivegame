@@ -2,15 +2,15 @@
  * @author: tipe.io
  */
 
-const helpers = require('./helpers');
-const buildUtils = require('./build-utils');
-const webpackMerge = require('webpack-merge'); // used to merge webpack configs
-const commonConfig = require('./webpack.common.js'); // the settings that are common to prod and dev
+const helpers = require("./helpers");
+const buildUtils = require("./build-utils");
+const webpackMerge = require("webpack-merge"); // used to merge webpack configs
+const commonConfig = require("./webpack.common.js"); // the settings that are common to prod and dev
 
 /**
  * Webpack Plugins
  */
-const LoaderOptionsPlugin = require('webpack/lib/LoaderOptionsPlugin');
+const LoaderOptionsPlugin = require("webpack/lib/LoaderOptionsPlugin");
 
 /**
  * Webpack configuration
@@ -18,21 +18,21 @@ const LoaderOptionsPlugin = require('webpack/lib/LoaderOptionsPlugin');
  * See: https://webpack.js.org/configuration/
  */
 module.exports = function(options) {
-  const ENV = (process.env.ENV = process.env.NODE_ENV = 'development');
-  const HOST = process.env.HOST || 'localhost';
+  const ENV = (process.env.ENV = process.env.NODE_ENV = "development");
+  const HOST = process.env.HOST || "localhost";
   const PORT = process.env.PORT || 3000;
 
   const METADATA = Object.assign({}, buildUtils.DEFAULT_METADATA, {
     host: HOST,
     port: PORT,
     ENV: ENV,
-    HMR: helpers.hasProcessFlag('hot'),
-    PUBLIC: process.env.PUBLIC_DEV || HOST + ':' + PORT
+    HMR: helpers.hasProcessFlag("hot"),
+    PUBLIC: process.env.PUBLIC_DEV || HOST + ":" + PORT
   });
 
   return webpackMerge(commonConfig({ env: ENV, metadata: METADATA }), {
-    mode: 'development',
-    devtool: 'inline-source-map',
+    mode: "development",
+    devtool: "inline-source-map",
 
     /**
      * Options affecting the output of the compilation.
@@ -45,7 +45,7 @@ module.exports = function(options) {
        *
        * See: https://webpack.js.org/configuration/output/#output-path
        */
-      path: helpers.root('dist'),
+      path: helpers.root("dist"),
 
       /**
        * Specifies the name of each output file on disk.
@@ -53,7 +53,7 @@ module.exports = function(options) {
        *
        * See: https://webpack.js.org/configuration/output/#output-filename
        */
-      filename: '[name].bundle.js',
+      filename: "[name].bundle.js",
 
       /**
        * The filename of the SourceMaps for the JavaScript files.
@@ -61,17 +61,17 @@ module.exports = function(options) {
        *
        * See: https://webpack.js.org/configuration/output/#output-sourcemapfilename
        */
-      sourceMapFilename: '[file].map',
+      sourceMapFilename: "[file].map",
 
       /** The filename of non-entry chunks as relative path
        * inside the output.path directory.
        *
        * See: https://webpack.js.org/configuration/output/#output-chunkfilename
        */
-      chunkFilename: '[id].chunk.js',
+      chunkFilename: "[id].chunk.js",
 
-      library: 'ac_[name]',
-      libraryTarget: 'var'
+      library: "ac_[name]",
+      libraryTarget: "var"
     },
 
     module: {
@@ -83,8 +83,8 @@ module.exports = function(options) {
          */
         {
           test: /\.css$/,
-          use: ['style-loader', 'css-loader'],
-          include: [helpers.root('src', 'styles')]
+          use: ["style-loader", "css-loader"],
+          include: [helpers.root("src", "styles")]
         },
 
         /**
@@ -94,8 +94,8 @@ module.exports = function(options) {
          */
         {
           test: /\.scss$/,
-          use: ['style-loader', 'css-loader', 'sass-loader'],
-          include: [helpers.root('src', 'styles')]
+          use: ["style-loader", "css-loader", "sass-loader"],
+          include: [helpers.root("src", "styles")]
         }
       ]
     },
@@ -126,6 +126,7 @@ module.exports = function(options) {
       hot: METADATA.HMR,
       public: METADATA.PUBLIC,
       historyApiFallback: true,
+      disableHostCheck: true,
       watchOptions: {
         // if you're using Docker you may need this
         // aggregateTimeout: 300,
@@ -153,12 +154,12 @@ module.exports = function(options) {
      */
     node: {
       global: true,
-      crypto: 'empty',
+      crypto: "empty",
       process: true,
       module: false,
       clearImmediate: false,
       setImmediate: false,
-      fs: 'empty'
+      fs: "empty"
     }
   });
 };
