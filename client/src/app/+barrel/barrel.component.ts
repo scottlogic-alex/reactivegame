@@ -81,16 +81,15 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
   @ViewChild("pre", { read: ElementRef })
   private pre: IElementRef<HTMLPreElement>;
-  public positions$: Subject<IPosition> = new BehaviorSubject<IPosition>({
-    x: 0,
-    y: 0
+  public positions$: Subject<IGameState> = new BehaviorSubject<IGameState>({
+    playerStates: []
   });
 
   public send(): void {
     this.clientWebSocket$.next("messsage from angular");
   }
 
-  private coordRegex: RegExp = new RegExp(", (\\d+), (\\d+)$");
+  private coordRegex: RegExp = new RegExp("^((\\w*-*)+), (\\d+), (\\d+)$");
 
   @HostListener("mousemove", ["$event"])
   onMousemove(event: MouseEvent) {
@@ -109,14 +108,19 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
       msg => {
         let users = msg.split(":");
+        let coords: IPosition;
+        let player: IPlayerState;
+        let game: IGameState = { playerStates: [] };
         users.forEach(user => {
           const match: RegExpExecArray | null = this.coordRegex.exec(user);
           if (match) {
-            console.log(match);
-            const [, x, y] = match;
-            this.positions$.next({ x: +x, y: +y });
+            const [, user, , x, y] = match;
+            coords = { x: +x, y: +y };
+            player = { username: user, position: coords };
+            game.playerStates.push(player);
           }
         });
+        this.positions$.next(game);
       },
       err => {
         console.error(err);
@@ -131,12 +135,13 @@ export class BarrelComponent implements OnInit, OnDestroy {
         withLatestFrom(this.positions$.pipe(bufferCount(10, 1))),
         takeUntil(this.destroy$)
       )
-      .subscribe(([, positions]) => {
-        // console.log(positions);
-        if (this.context) {
-          this.context.clearRect(0, 0, 1000, 800);
-          positions.forEach(pos => this.draw(pos));
-        }
+      .subscribe(([, gameState]) => {
+        this.context.clearRect(0, 0, 1000, 800);
+        gameState.forEach(ps => {
+          ps.playerStates.forEach(pos => {
+            this.draw(pos.position);
+          });
+        });
       });
 
     this.mouseEvents$
@@ -175,4 +180,13 @@ interface IElementRef<T> extends ElementRef {
 interface IPosition {
   x: number;
   y: number;
+}
+
+interface IPlayerState {
+  username: string;
+  position: IPosition;
+}
+
+interface IGameState {
+  playerStates: Array<IPlayerState>;
 }

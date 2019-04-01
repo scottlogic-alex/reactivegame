@@ -28,6 +28,8 @@ class WutHandler: WebSocketHandler {
     val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
     val sessions: MutableList<WebSocketSession> = mutableListOf()
 
+
+
     override fun handle(session: WebSocketSession): Mono<Void> {
         val thisPlayerState: PlayerState = PlayerState(
                 username = UUID.randomUUID().toString(),
