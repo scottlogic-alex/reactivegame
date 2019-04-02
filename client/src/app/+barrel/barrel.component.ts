@@ -26,9 +26,6 @@ import {
   webSocket,
   WebSocketSubjectConfig
 } from "rxjs/websocket";
-import { ContextReplacementPlugin } from "webpack";
-import { deflateRaw } from "zlib";
-
 /**
  * We're loading this component asynchronously
  * We are using some magic with es6-promise-loader that will wrap the module with a Promise
@@ -46,7 +43,7 @@ console.log("`Barrel` component loaded asynchronously");
         Child Barrel
       </a>
     </span>
-    <button (click)="send()">send</button>
+    <button (click)="getColour()">change colour!</button>
     <div>{{ this.X }}, {{ this.Y }}</div>
     <canvas
       #myCanvas
@@ -54,7 +51,7 @@ console.log("`Barrel` component loaded asynchronously");
       height="800"
       style="border:1px solid"
     ></canvas>
-    <pre>{{ positions$ | async | json }}</pre>
+    <pre>{{ gameStates$ | async | json }}</pre>
     <router-outlet></router-outlet>
   `
 })
@@ -66,6 +63,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     HTMLCanvasElement
   >;
   public context: CanvasRenderingContext2D;
+  public colour: string = "black";
 
   ngAfterViewInit(): void {
     this.context = this.myCanvas.nativeElement.getContext("2d");
@@ -76,17 +74,24 @@ export class BarrelComponent implements OnInit, OnDestroy {
     const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
     this.context.beginPath();
     this.context.arc(x - left, y - top, 10, 0, 2 * Math.PI);
+    this.context.strokeStyle = this.colour;
     this.context.stroke();
   }
 
   @ViewChild("pre", { read: ElementRef })
   private pre: IElementRef<HTMLPreElement>;
-  public positions$: Subject<IGameState> = new BehaviorSubject<IGameState>({
+  public gameStates$: Subject<IGameState> = new BehaviorSubject<IGameState>({
     playerStates: []
   });
 
-  public send(): void {
-    this.clientWebSocket$.next("messsage from angular");
+  public getColour(): void {
+    let letters = "0123456789ABCDEF";
+    let colour = "#";
+    for (var i = 0; i < 6; i++) {
+      colour += letters[Math.floor(Math.random() * 16)];
+    }
+    this.colour = colour;
+    console.log(this.colour);
   }
 
   private coordRegex: RegExp = new RegExp("^((\\w*-*)+), (\\d+), (\\d+)$");
@@ -110,17 +115,22 @@ export class BarrelComponent implements OnInit, OnDestroy {
         let users = msg.split(":");
         let coords: IPosition;
         let player: IPlayerState;
-        let game: IGameState = { playerStates: [] };
-        users.forEach(user => {
-          const match: RegExpExecArray | null = this.coordRegex.exec(user);
-          if (match) {
-            const [, user, , x, y] = match;
-            coords = { x: +x, y: +y };
-            player = { username: user, position: coords };
-            game.playerStates.push(player);
-          }
-        });
-        this.positions$.next(game);
+        let game: IGameState = {
+          playerStates: users
+            .map(
+              (user): RegExpExecArray | null => {
+                return this.coordRegex.exec(user);
+              }
+            )
+            .filter(match => match !== null)
+            .map(match => {
+              const [, user, , x, y] = match;
+              coords = { x: +x, y: +y };
+              player = { username: user, position: coords };
+              return player;
+            })
+        };
+        this.gameStates$.next(game);
       },
       err => {
         console.error(err);
@@ -132,7 +142,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
     interval(0, animationFrameScheduler)
       .pipe(
-        withLatestFrom(this.positions$.pipe(bufferCount(10, 1))),
+        withLatestFrom(this.gameStates$.pipe(bufferCount(10, 1))),
         takeUntil(this.destroy$)
       )
       .subscribe(([, gameState]) => {

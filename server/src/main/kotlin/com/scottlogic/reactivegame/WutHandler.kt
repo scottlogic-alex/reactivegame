@@ -1,12 +1,17 @@
 package com.scottlogic.reactivegame
 
+import org.reactivestreams.Publisher
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.socket.WebSocketHandler
+import org.springframework.web.reactive.socket.WebSocketMessage
 import org.springframework.web.reactive.socket.WebSocketSession
-import reactor.core.publisher.Flux.interval
-import reactor.core.publisher.Mono
-import java.time.Duration
+import reactor.core.publisher.*
 import java.util.*
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Flux.interval
+//import reactor.core.publisher.FluxCreate.*
+import java.time.Duration
+
 
 data class Position (
         var x: Int,
@@ -23,25 +28,50 @@ data class PlayerState(
  )
 
 @Component
-class WutHandler: WebSocketHandler {
+class WutHandler: WebSocketHandler/*, InitializingBean*/ {
     val gameState: GameState = GameState(mutableListOf())
     val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
-    val sessions: MutableList<WebSocketSession> = mutableListOf()
+    var sink: FluxSink<Unit>? = null
+//    val sink = EmitterProcessor.create<Unit>().sink()
+    val gameChanges = Flux.create<Unit>{ sink = it }.publish().autoConnect() //.share()
+
+//    val sessions: MutableList<WebSocketSession> = mutableListOf()
 
 
+//    override fun afterPropertiesSet() {
+//        gameChangesSubject.subscribe()
+//    }
+
+//    @Bean(initMethod = "init")
+//    fun wutHandler(): WutHandler {
+//        return WutHandler()
+//    }
+
+//    val a = interval(Duration.ofSeconds(1L)).share().log()
+//    val b = interval(Duration.ofSeconds(1L)).publish().autoConnect().log()
 
     override fun handle(session: WebSocketSession): Mono<Void> {
-        val thisPlayerState: PlayerState = PlayerState(
+//        a.subscribe()
+//        val subscription = a.subscribe()
+
+        val thisPlayerState = PlayerState(
                 username = UUID.randomUUID().toString(),
                 position = Position(0, 0)
         )
         gameState.playerStates += thisPlayerState
-        sessions += session
+
+
+
+        sink?.next(Unit)
+//        sessions += session
 
         return session.send(
-                interval(Duration.ofMillis(10L)).map{ session.textMessage(
-                        gameState.playerStates.joinToString(":") { player -> "${player.username}, ${player.position.x}, ${player.position.y}"}
-                )}
+                // on update of subject instead of interval
+                gameChanges
+//                Flux.from(gameChanges)
+                        .map { gameState.playerStates.joinToString(":") { player -> "${player.username}, ${player.position.x}, ${player.position.y}" } }
+                        .log()
+                        .map(session::textMessage)
         ).and(
                 session.receive()
                         .map {
@@ -50,14 +80,21 @@ class WutHandler: WebSocketHandler {
                                 val (x, y) = find.destructured
                                 thisPlayerState.position.x = x.toInt()
                                 thisPlayerState.position.y = y.toInt()
+                                // send void to subject
+//                                afterPropertiesSet()
+                                sink?.next(Unit)
                             }
                             it.payloadAsText
                         }
-                        .log()
-                        .all { true }
-                        .then<Boolean>(Mono.create{
+//                        .log()
+//                        .
+//                        .all { true }
+                        .then<WebSocketMessage>(Mono.create{
                             gameState.playerStates -= thisPlayerState
+//                            subscription.dispose()
+                            sink?.next(Unit)
                         })
         )
     }
+
 }

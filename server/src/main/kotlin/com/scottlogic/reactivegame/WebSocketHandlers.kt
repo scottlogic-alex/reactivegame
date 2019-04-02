@@ -21,13 +21,13 @@ import org.springframework.beans.factory.annotation.Autowired
 @Configuration
 class WebSocketHandlers {
     @Autowired
-    private lateinit var webSocketHandler: WebSocketHandler
+    private lateinit var wutHandler: WutHandler
 
     @Bean
     fun webSocketHandlerMapping(): HandlerMapping {
         val mapping = SimpleUrlHandlerMapping()
         mapping.order = 1
-        mapping.urlMap = mapOf<String, WebSocketHandler>("/wut" to webSocketHandler)
+        mapping.urlMap = mapOf<String, WebSocketHandler>("/wut" to wutHandler)
         return mapping
     }
 
