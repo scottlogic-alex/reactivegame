@@ -41,7 +41,6 @@ console.log("`Barrel` component loaded asynchronously");
         Child Barrel
       </a>
     </span>
-
     <div>{{ this.X }}, {{ this.Y }}</div>
     <canvas
       #myCanvas
@@ -67,14 +66,29 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.context = this.myCanvas.nativeElement.getContext("2d");
   }
 
-  private draw({ colour, position: { x, y } }: Partial<IPlayerState>) {
+  private draw(colour, position, transparency: number) {
     const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
+    this.context.globalAlpha = transparency;
     this.context.beginPath();
-    this.context.arc(x - left, y - top, 10, 0, 2 * Math.PI);
+    this.context.lineWidth = 2;
+    this.context.arc(
+      position.x - left,
+      position.y - top - window.scrollY,
+      10,
+      0,
+      2 * Math.PI
+    );
     this.context.strokeStyle = colour;
     this.context.stroke();
-    // this.context.fillStyle = colour;
-    // this.context.fill();
+    this.context.fillStyle = colour;
+    this.context.fill();
+  }
+
+  private collision(existing, toDraw): boolean {
+    return (
+      Math.pow(existing.x - toDraw.x, 2) + Math.pow(existing.y - toDraw.y, 2) <
+      20 ** 2
+    );
   }
 
   @ViewChild("pre", { read: ElementRef })
@@ -83,7 +97,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     playerStates: []
   });
 
-  private coordRegex: RegExp = /^([\w-]+), (#[A-Z\d]{6}), (\d+), (\d+)$/;
+  private coordRegex: RegExp = /^([\w-]+), (#[A-Z\d]{6}), ([\d,_]+)$/;
 
   @HostListener("mousemove", ["$event"])
   onMousemove(event: MouseEvent) {
@@ -98,24 +112,29 @@ export class BarrelComponent implements OnInit, OnDestroy {
       deserializer: (e: MessageEvent) => e.data
     };
     this.clientWebSocket$ = webSocket(config);
-
+    this.mouseEvents$.next({ x: 0, y: 0 });
     this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
       msg => {
+        // console.log(msg);
         let users = msg.split(":");
         let game: IGameState = {
           playerStates: users
             .map(
               (user): RegExpExecArray | null => {
+                // console.log(user);
                 return this.coordRegex.exec(user);
               }
             )
             .filter(match => match !== null)
             .map(
               (match): IPlayerState => {
-                const [, username, colour, x, y] = match;
+                const [, username, colour, positionsString] = match;
                 return {
                   username,
-                  position: { x: +x, y: +y },
+                  position: positionsString.split("_").map(str => {
+                    const [x, y] = str.split(",");
+                    return { x: +x, y: +y };
+                  }),
                   colour
                 };
               }
@@ -135,7 +154,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
       .pipe(
         withLatestFrom(
           this.gameStates$.pipe(
-            bufferCount(10, 1),
+            // bufferCount(10, 1),
             distinctUntilChanged()
           )
         ),
@@ -143,10 +162,18 @@ export class BarrelComponent implements OnInit, OnDestroy {
       )
       .subscribe(([, gameState]) => {
         this.context.clearRect(0, 0, 1000, 800);
-        gameState.forEach(ps => {
-          ps.playerStates.forEach(ps => {
-            this.draw(ps);
+        let arr = [];
+        gameState.playerStates.forEach(playerState => {
+          let colour = playerState.colour;
+
+          playerState.position.forEach((coords, idx) => {
+            let colls = arr.filter(c1 => this.collision(c1, coords));
+            if (colls.length > 0) this.draw("red", coords, 1);
+            else this.draw(colour, coords, idx / 10);
+            // arr.push(playerState.position);
           });
+          // playerState.position.forEach(pos => arr.push(pos));
+          arr.push(...playerState.position);
         });
       });
 
@@ -168,7 +195,9 @@ export class BarrelComponent implements OnInit, OnDestroy {
           position.y < top + 800 &&
           position.y > top
         ) {
-          this.clientWebSocket$.next(`X: ${position.x}, Y: ${position.y}`);
+          this.clientWebSocket$.next(
+            `X: ${position.x}, Y: ${position.y + window.scrollY}`
+          );
         }
       });
   }
@@ -190,7 +219,7 @@ interface IPosition {
 
 interface IPlayerState {
   username: string;
-  position: IPosition;
+  position: Array<IPosition>;
   colour: string;
 }
 

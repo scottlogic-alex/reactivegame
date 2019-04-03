@@ -7,6 +7,7 @@ import org.springframework.web.reactive.socket.WebSocketSession
 import reactor.core.publisher.*
 import java.util.*
 import reactor.core.publisher.Flux
+import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.random.nextUBytes
 
@@ -18,7 +19,7 @@ data class Position (
 
 data class PlayerState @ExperimentalUnsignedTypes constructor(
         val username: String,
-        var position: Position,
+        var position: ArrayDeque<Position>,
         val colourBytes: UByteArray
 )
 
@@ -26,13 +27,17 @@ data class PlayerState @ExperimentalUnsignedTypes constructor(
          val playerStates: MutableList<PlayerState>
  )
 
+
 @Component
 class WutHandler: WebSocketHandler/*, InitializingBean*/ {
     val gameState: GameState = GameState(mutableListOf())
     val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
     var sink: FluxSink<Unit>? = null
 //    val sink = EmitterProcessor.create<Unit>().sink()
-    val gameChanges = Flux.create<Unit>{ sink = it }.publish().autoConnect() //.share()
+    val gameChanges = Flux.create<Unit>{
+        sink = it
+        it.next(Unit)
+    }.publish().autoConnect() //.share()
 
 
     @ExperimentalUnsignedTypes
@@ -41,11 +46,18 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
                 .format(*channels.map(UByte::toInt).toTypedArray())
     }
 
+//    fun collision(existing: Position, toDraw: Position): Boolean {
+//        return (
+//                (existing.x - toDraw.x).toDouble().pow(2) + (existing.y - toDraw.y).toDouble().pow(2) < 20.0.pow(2)
+//        )
+//    }
+
+
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
         val thisPlayerState = PlayerState(
                 username = UUID.randomUUID().toString(),
-                position = Position(0, 0),
+                position = ArrayDeque(), //Position(0, 0),
                 colourBytes = Random.nextUBytes(3)
         )
         gameState.playerStates += thisPlayerState
@@ -56,9 +68,11 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
 
         return session.send(
                 gameChanges
-                        .map { gameState.playerStates.joinToString(":") { player -> "${player.username}" +
-                                ", ${getColour(player.colourBytes)}" +
-                                ", ${player.position.x}, ${player.position.y}" } }
+                        .map { gameState.playerStates.joinToString(":") { player ->
+                            "${player.username}, ${getColour(player.colourBytes)}, " +
+//                                ", ${player.position.x}, ${player.position.y}" } }
+                                    player.position.joinToString("_") { position -> "${position.x},${position.y}" }
+                        }}
                         .log()
                         .map(session::textMessage)
         ).and(
@@ -67,8 +81,10 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
                             val find = coordRegex.find(it.payloadAsText)
                             if (find != null) {
                                 val (x, y) = find.destructured
-                                thisPlayerState.position.x = x.toInt()
-                                thisPlayerState.position.y = y.toInt()
+                                if (thisPlayerState.position.size >= 10) thisPlayerState.position.pop()
+                                thisPlayerState.position.addLast(Position(x.toInt(), y.toInt()))
+//                                thisPlayerState.position.x = x.toInt()
+//                                thisPlayerState.position.y = y.toInt()
                                 sink?.next(Unit)
                             }
                             it.payloadAsText
