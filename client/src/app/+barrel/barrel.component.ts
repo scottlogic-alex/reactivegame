@@ -4,10 +4,8 @@ import {
   OnDestroy,
   ElementRef,
   ViewChild,
-  HostListener,
-  EventEmitter
+  HostListener
 } from "@angular/core";
-import { prepareProfile } from "selenium-webdriver/firefox";
 import {
   interval,
   Subject,
@@ -43,7 +41,7 @@ console.log("`Barrel` component loaded asynchronously");
         Child Barrel
       </a>
     </span>
-    <button (click)="getColour()">change colour!</button>
+
     <div>{{ this.X }}, {{ this.Y }}</div>
     <canvas
       #myCanvas
@@ -54,6 +52,7 @@ console.log("`Barrel` component loaded asynchronously");
     <pre>{{ gameStates$ | async | json }}</pre>
     <router-outlet></router-outlet>
   `
+  // <button (click)="getColour()">change colour!</button>
 })
 export class BarrelComponent implements OnInit, OnDestroy {
   private clientWebSocket$: WebSocketSubject<string>;
@@ -63,19 +62,19 @@ export class BarrelComponent implements OnInit, OnDestroy {
     HTMLCanvasElement
   >;
   public context: CanvasRenderingContext2D;
-  public colour: string = "black";
 
   ngAfterViewInit(): void {
     this.context = this.myCanvas.nativeElement.getContext("2d");
-    this.draw({ x: 0, y: 0 });
   }
 
-  private draw({ x, y }: IPosition) {
+  private draw({ colour, position: { x, y } }: Partial<IPlayerState>) {
     const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
     this.context.beginPath();
     this.context.arc(x - left, y - top, 10, 0, 2 * Math.PI);
-    this.context.strokeStyle = this.colour;
+    this.context.strokeStyle = colour;
     this.context.stroke();
+    // this.context.fillStyle = colour;
+    // this.context.fill();
   }
 
   @ViewChild("pre", { read: ElementRef })
@@ -84,17 +83,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     playerStates: []
   });
 
-  public getColour(): void {
-    let letters = "0123456789ABCDEF";
-    let colour = "#";
-    for (var i = 0; i < 6; i++) {
-      colour += letters[Math.floor(Math.random() * 16)];
-    }
-    this.colour = colour;
-    console.log(this.colour);
-  }
-
-  private coordRegex: RegExp = new RegExp("^((\\w*-*)+), (\\d+), (\\d+)$");
+  private coordRegex: RegExp = /^([\w-]+), (#[A-Z\d]{6}), (\d+), (\d+)$/;
 
   @HostListener("mousemove", ["$event"])
   onMousemove(event: MouseEvent) {
@@ -113,8 +102,6 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
       msg => {
         let users = msg.split(":");
-        let coords: IPosition;
-        let player: IPlayerState;
         let game: IGameState = {
           playerStates: users
             .map(
@@ -123,12 +110,16 @@ export class BarrelComponent implements OnInit, OnDestroy {
               }
             )
             .filter(match => match !== null)
-            .map(match => {
-              const [, user, , x, y] = match;
-              coords = { x: +x, y: +y };
-              player = { username: user, position: coords };
-              return player;
-            })
+            .map(
+              (match): IPlayerState => {
+                const [, username, colour, x, y] = match;
+                return {
+                  username,
+                  position: { x: +x, y: +y },
+                  colour
+                };
+              }
+            )
         };
         this.gameStates$.next(game);
       },
@@ -142,14 +133,19 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
     interval(0, animationFrameScheduler)
       .pipe(
-        withLatestFrom(this.gameStates$.pipe(bufferCount(10, 1))),
+        withLatestFrom(
+          this.gameStates$.pipe(
+            bufferCount(10, 1),
+            distinctUntilChanged()
+          )
+        ),
         takeUntil(this.destroy$)
       )
       .subscribe(([, gameState]) => {
         this.context.clearRect(0, 0, 1000, 800);
         gameState.forEach(ps => {
-          ps.playerStates.forEach(pos => {
-            this.draw(pos.position);
+          ps.playerStates.forEach(ps => {
+            this.draw(ps);
           });
         });
       });
@@ -195,6 +191,7 @@ interface IPosition {
 interface IPlayerState {
   username: string;
   position: IPosition;
+  colour: string;
 }
 
 interface IGameState {
