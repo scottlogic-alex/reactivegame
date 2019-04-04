@@ -17,7 +17,15 @@ import {
   takeUntil,
   bufferCount,
   distinctUntilChanged,
-  withLatestFrom
+  withLatestFrom,
+  map,
+  startWith,
+  take,
+  filter,
+  windowTime,
+  mergeAll,
+  combineAll,
+  tap
 } from "rxjs/operators";
 import {
   WebSocketSubject,
@@ -56,6 +64,7 @@ console.log("`Barrel` component loaded asynchronously");
 export class BarrelComponent implements OnInit, OnDestroy {
   private clientWebSocket$: WebSocketSubject<string>;
   private readonly destroy$: Subject<void> = new Subject<void>();
+  private readonly collision$: Subject<ICollision> = new Subject<ICollision>();
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
     HTMLCanvasElement
@@ -84,6 +93,21 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.context.fill();
   }
 
+  private drawCollsion(position: IPosition) {
+    const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
+    const imgSrc = "../../../assets/img/explosion.png";
+    this.context.globalAlpha = 1;
+    var img = new Image();
+    img.src = imgSrc;
+    this.context.drawImage(
+      img,
+      position.x - left - 50,
+      position.y - top - window.scrollY - 50,
+      100,
+      100
+    );
+  }
+
   private stringtoCoords(str: string): IPosition {
     const [x, y] = str.split(",");
     return { x: +x, y: +y };
@@ -92,8 +116,8 @@ export class BarrelComponent implements OnInit, OnDestroy {
   @ViewChild("pre", { read: ElementRef })
   private pre: IElementRef<HTMLPreElement>;
   public gameStates$: Subject<IGameState> = new BehaviorSubject<IGameState>({
-    playerStates: [],
-    collision: { x: -100, y: -100 }
+    playerStates: []
+    // collision: { x: -100, y: -100 }
   });
 
   private coordRegex: RegExp = /^([\w-]+), (#[A-Z\d]{6}), ([\d,_]+)$/;
@@ -141,10 +165,13 @@ export class BarrelComponent implements OnInit, OnDestroy {
                     colour
                   };
                 }
-              ),
-            collision: bang
+              )
+            // collision: bang
           };
           this.gameStates$.next(game);
+          if (bang.x !== -100 && bang.y !== -100) {
+            this.collision$.next({ position: bang });
+          }
         }
       },
       err => {
@@ -157,21 +184,41 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
     interval(0, animationFrameScheduler)
       .pipe(
-        withLatestFrom(this.gameStates$.pipe(distinctUntilChanged())),
+        withLatestFrom(
+          this.gameStates$.pipe(distinctUntilChanged()),
+          this.collision$.pipe(
+            startWith({ position: { x: 0, y: 0 } })
+            // map(collision => {
+            //   return interval(1000).pipe(
+            //     startWith(0),
+            //     map(tick => collision),
+            //     take(2)
+            //   );
+            // }),
+            // windowTime(1000),
+            // tap(window => {
+            //   console.log(window);
+            // })
+            // combineAll()
+          )
+        ),
         takeUntil(this.destroy$)
       )
-      .subscribe(([, gameState]) => {
-        this.context.clearRect(0, 0, 1000, 800);
-        gameState.playerStates.forEach(playerState => {
-          let colour = playerState.colour;
-          playerState.position.forEach((coords, idx) => {
-            this.draw(colour, coords, idx / 10);
+      .subscribe(
+        ([, gameState, collision]: [never, IGameState, ICollision]) => {
+          // console.log(gameState);
+          this.context.clearRect(0, 0, 1000, 800);
+          gameState.playerStates.forEach(playerState => {
+            let colour = playerState.colour;
+            playerState.position.forEach((coords, idx) => {
+              this.draw(colour, coords, idx / 10);
+            });
           });
-        });
-        if (gameState.collision.x !== -100 && gameState.collision.y !== -100) {
-          this.draw("red", gameState.collision, 1);
+          // collisions.forEach(collision => {
+          this.drawCollsion(collision.position);
+          // });
         }
-      });
+      );
 
     this.mouseEvents$
       .pipe(
@@ -221,5 +268,8 @@ interface IPlayerState {
 
 interface IGameState {
   playerStates: Array<IPlayerState>;
-  collision: IPosition;
+}
+
+interface ICollision {
+  position: IPosition;
 }

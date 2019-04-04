@@ -53,7 +53,6 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
         )
     }
 
-
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
         val thisPlayerState = PlayerState(
@@ -62,8 +61,6 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
                 colourBytes = Random.nextUBytes(3)
         )
         gameState.playerStates += thisPlayerState
-
-
 
         sink?.next(Unit)
 
@@ -89,7 +86,6 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
                                 gameState.playerStates.forEach{user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions)}
                                 val collisions = obstacles.filter{position -> collision(position, currentCoordinate) }
                                 if (collisions.isNotEmpty()) {
-                                    System.out.println("collision") //do some logic here so that the current set of coordinates can be returned to the client in the text message
                                     gameState.recent = Position(x.toInt(), y.toInt())
                                 }
                                 sink?.next(Unit)
