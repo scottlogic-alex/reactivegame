@@ -19,18 +19,19 @@ data class Position (
 
 data class PlayerState @ExperimentalUnsignedTypes constructor(
         val username: String,
-        var position: ArrayDeque<Position>,
+        var positions: ArrayDeque<Position>,
         val colourBytes: UByteArray
 )
 
  data class GameState (
-         val playerStates: MutableList<PlayerState>
+         val playerStates: MutableList<PlayerState>,
+         var recent: Position?
  )
 
 
 @Component
 class WutHandler: WebSocketHandler/*, InitializingBean*/ {
-    val gameState: GameState = GameState(mutableListOf())
+    val gameState: GameState = GameState(playerStates = mutableListOf(), recent = null)
     val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
     var sink: FluxSink<Unit>? = null
 //    val sink = EmitterProcessor.create<Unit>().sink()
@@ -46,18 +47,18 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
                 .format(*channels.map(UByte::toInt).toTypedArray())
     }
 
-//    fun collision(existing: Position, toDraw: Position): Boolean {
-//        return (
-//                (existing.x - toDraw.x).toDouble().pow(2) + (existing.y - toDraw.y).toDouble().pow(2) < 20.0.pow(2)
-//        )
-//    }
+    fun collision(existing: Position, toDraw: Position): Boolean {
+        return (
+                (existing.x - toDraw.x).toDouble().pow(2) + (existing.y - toDraw.y).toDouble().pow(2) < 20.0.pow(2)
+        )
+    }
 
 
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
         val thisPlayerState = PlayerState(
                 username = UUID.randomUUID().toString(),
-                position = ArrayDeque(), //Position(0, 0),
+                positions = ArrayDeque(), //Position(0, 0),
                 colourBytes = Random.nextUBytes(3)
         )
         gameState.playerStates += thisPlayerState
@@ -70,9 +71,8 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
                 gameChanges
                         .map { gameState.playerStates.joinToString(":") { player ->
                             "${player.username}, ${getColour(player.colourBytes)}, " +
-//                                ", ${player.position.x}, ${player.position.y}" } }
-                                    player.position.joinToString("_") { position -> "${position.x},${position.y}" }
-                        }}
+                                    player.positions.joinToString("_") { position -> "${position.x},${position.y}" }
+                        } + "/${gameState.recent?.x ?: -100}, ${gameState.recent?.y ?: -100}"}
                         .log()
                         .map(session::textMessage)
         ).and(
@@ -81,10 +81,17 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
                             val find = coordRegex.find(it.payloadAsText)
                             if (find != null) {
                                 val (x, y) = find.destructured
-                                if (thisPlayerState.position.size >= 10) thisPlayerState.position.pop()
-                                thisPlayerState.position.addLast(Position(x.toInt(), y.toInt()))
-//                                thisPlayerState.position.x = x.toInt()
-//                                thisPlayerState.position.y = y.toInt()
+                                val currentCoordinate = Position(x.toInt(), y.toInt())
+                                if (thisPlayerState.positions.size >= 10) thisPlayerState.positions.pop()
+                                thisPlayerState.positions.addLast(currentCoordinate)
+                                val obstacles = arrayListOf<Position>()
+                                gameState.recent = null
+                                gameState.playerStates.forEach{user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions)}
+                                val collisions = obstacles.filter{position -> collision(position, currentCoordinate) }
+                                if (collisions.isNotEmpty()) {
+                                    System.out.println("collision") //do some logic here so that the current set of coordinates can be returned to the client in the text message
+                                    gameState.recent = Position(x.toInt(), y.toInt())
+                                }
                                 sink?.next(Unit)
                             }
                             it.payloadAsText

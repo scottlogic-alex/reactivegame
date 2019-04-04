@@ -84,17 +84,16 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.context.fill();
   }
 
-  private collision(existing, toDraw): boolean {
-    return (
-      Math.pow(existing.x - toDraw.x, 2) + Math.pow(existing.y - toDraw.y, 2) <
-      20 ** 2
-    );
+  private stringtoCoords(str: string): IPosition {
+    const [x, y] = str.split(",");
+    return { x: +x, y: +y };
   }
 
   @ViewChild("pre", { read: ElementRef })
   private pre: IElementRef<HTMLPreElement>;
   public gameStates$: Subject<IGameState> = new BehaviorSubject<IGameState>({
-    playerStates: []
+    playerStates: [],
+    collision: { x: -100, y: -100 }
   });
 
   private coordRegex: RegExp = /^([\w-]+), (#[A-Z\d]{6}), ([\d,_]+)$/;
@@ -116,31 +115,37 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
       msg => {
         // console.log(msg);
-        let users = msg.split(":");
-        let game: IGameState = {
-          playerStates: users
-            .map(
-              (user): RegExpExecArray | null => {
-                // console.log(user);
-                return this.coordRegex.exec(user);
-              }
-            )
-            .filter(match => match !== null)
-            .map(
-              (match): IPlayerState => {
-                const [, username, colour, positionsString] = match;
-                return {
-                  username,
-                  position: positionsString.split("_").map(str => {
-                    const [x, y] = str.split(",");
-                    return { x: +x, y: +y };
-                  }),
-                  colour
-                };
-              }
-            )
-        };
-        this.gameStates$.next(game);
+        const sections = msg.split("/");
+        if (sections.length === 2) {
+          const [playerStates, collisions] = sections;
+          // console.log(collisions);
+          const bang = this.stringtoCoords(collisions);
+          let users = playerStates.split(":");
+          let game: IGameState = {
+            playerStates: users
+              .map(
+                (user): RegExpExecArray | null => {
+                  // console.log(user);
+                  return this.coordRegex.exec(user);
+                }
+              )
+              .filter(match => match !== null)
+              .map(
+                (match): IPlayerState => {
+                  const [, username, colour, positionsString] = match;
+                  return {
+                    username,
+                    position: positionsString
+                      .split("_")
+                      .map(str => this.stringtoCoords(str)),
+                    colour
+                  };
+                }
+              ),
+            collision: bang
+          };
+          this.gameStates$.next(game);
+        }
       },
       err => {
         console.error(err);
@@ -152,29 +157,20 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
     interval(0, animationFrameScheduler)
       .pipe(
-        withLatestFrom(
-          this.gameStates$.pipe(
-            // bufferCount(10, 1),
-            distinctUntilChanged()
-          )
-        ),
+        withLatestFrom(this.gameStates$.pipe(distinctUntilChanged())),
         takeUntil(this.destroy$)
       )
       .subscribe(([, gameState]) => {
         this.context.clearRect(0, 0, 1000, 800);
-        let arr = [];
         gameState.playerStates.forEach(playerState => {
           let colour = playerState.colour;
-
           playerState.position.forEach((coords, idx) => {
-            let colls = arr.filter(c1 => this.collision(c1, coords));
-            if (colls.length > 0) this.draw("red", coords, 1);
-            else this.draw(colour, coords, idx / 10);
-            // arr.push(playerState.position);
+            this.draw(colour, coords, idx / 10);
           });
-          // playerState.position.forEach(pos => arr.push(pos));
-          arr.push(...playerState.position);
         });
+        if (gameState.collision.x !== -100 && gameState.collision.y !== -100) {
+          this.draw("red", gameState.collision, 1);
+        }
       });
 
     this.mouseEvents$
@@ -225,4 +221,5 @@ interface IPlayerState {
 
 interface IGameState {
   playerStates: Array<IPlayerState>;
+  collision: IPosition;
 }
