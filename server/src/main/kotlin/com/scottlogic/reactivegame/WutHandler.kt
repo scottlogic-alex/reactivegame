@@ -7,10 +7,15 @@ import org.springframework.web.reactive.socket.WebSocketSession
 import reactor.core.publisher.*
 import java.util.*
 import reactor.core.publisher.Flux
+import kotlin.collections.ArrayList
+import kotlin.concurrent.timerTask
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.random.nextUBytes
 
+data class Collisions (
+        var collidees: ArrayList<Position>
+)
 
 data class Position (
         var x: Int,
@@ -32,6 +37,7 @@ data class PlayerState @ExperimentalUnsignedTypes constructor(
 @Component
 class WutHandler: WebSocketHandler/*, InitializingBean*/ {
     val gameState: GameState = GameState(playerStates = mutableListOf(), recent = null)
+    var safeDots: Collisions = Collisions(collidees = ArrayList())
     val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
     var sink: FluxSink<Unit>? = null
 //    val sink = EmitterProcessor.create<Unit>().sink()
@@ -48,9 +54,20 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
     }
 
     fun collision(existing: Position, toDraw: Position): Boolean {
-        return (
-                (existing.x - toDraw.x).toDouble().pow(2) + (existing.y - toDraw.y).toDouble().pow(2) < 20.0.pow(2)
-        )
+        if (safeDots.collidees.find{position -> (position.x === existing.x && position.y === existing.y) } === null) {
+            return (
+                    (existing.x - toDraw.x).toDouble().pow(2) + (existing.y - toDraw.y).toDouble().pow(2) < 20.0.pow(2)
+                    )
+        }
+        return false
+    }
+
+    fun waitOneSec(coordinates: List<Position>){
+        val timer = Timer()
+        System.out.println(safeDots.collidees)
+        timer.schedule(timerTask{
+            safeDots.collidees.removeAll(coordinates)
+        }, 1000)
     }
 
     @ExperimentalUnsignedTypes
@@ -86,6 +103,8 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
                                 gameState.playerStates.forEach{user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions)}
                                 val collisions = obstacles.filter{position -> collision(position, currentCoordinate) }
                                 if (collisions.isNotEmpty()) {
+                                    safeDots.collidees.addAll(collisions)
+                                    waitOneSec(collisions)
                                     gameState.recent = Position(x.toInt(), y.toInt())
                                 }
                                 sink?.next(Unit)

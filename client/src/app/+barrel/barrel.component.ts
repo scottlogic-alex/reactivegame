@@ -65,6 +65,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
   private clientWebSocket$: WebSocketSubject<string>;
   private readonly destroy$: Subject<void> = new Subject<void>();
   private readonly collision$: Subject<ICollision> = new Subject<ICollision>();
+  private readonly collisions: Set<ICollision> = new Set<ICollision>();
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
     HTMLCanvasElement
@@ -182,43 +183,31 @@ export class BarrelComponent implements OnInit, OnDestroy {
       }
     );
 
+    this.collision$.pipe().subscribe(collision => {
+      this.collisions.add(collision);
+      setTimeout(() => {
+        this.collisions.delete(collision);
+      }, 1000);
+    });
+
     interval(0, animationFrameScheduler)
       .pipe(
-        withLatestFrom(
-          this.gameStates$.pipe(distinctUntilChanged()),
-          this.collision$.pipe(
-            startWith({ position: { x: 0, y: 0 } })
-            // map(collision => {
-            //   return interval(1000).pipe(
-            //     startWith(0),
-            //     map(tick => collision),
-            //     take(2)
-            //   );
-            // }),
-            // windowTime(1000),
-            // tap(window => {
-            //   console.log(window);
-            // })
-            // combineAll()
-          )
-        ),
+        withLatestFrom(this.gameStates$.pipe(distinctUntilChanged())),
         takeUntil(this.destroy$)
       )
-      .subscribe(
-        ([, gameState, collision]: [never, IGameState, ICollision]) => {
-          // console.log(gameState);
-          this.context.clearRect(0, 0, 1000, 800);
-          gameState.playerStates.forEach(playerState => {
-            let colour = playerState.colour;
-            playerState.position.forEach((coords, idx) => {
-              this.draw(colour, coords, idx / 10);
-            });
+      .subscribe(([, gameState]: [never, IGameState]) => {
+        // console.log(gameState);
+        this.context.clearRect(0, 0, 1000, 800);
+        gameState.playerStates.forEach(playerState => {
+          let colour = playerState.colour;
+          playerState.position.forEach((coords, idx) => {
+            this.draw(colour, coords, idx / 10);
           });
-          // collisions.forEach(collision => {
+        });
+        this.collisions.forEach(collision => {
           this.drawCollsion(collision.position);
-          // });
-        }
-      );
+        });
+      });
 
     this.mouseEvents$
       .pipe(
