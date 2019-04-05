@@ -10,6 +10,7 @@ import reactor.core.publisher.Flux
 import kotlin.collections.ArrayList
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
+import kotlin.math.sign
 import kotlin.random.Random
 import kotlin.random.nextUBytes
 
@@ -70,6 +71,27 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
         }, 1000)
     }
 
+    fun calculatePosition(mousePosition: Position, oldPosition: Position): Position {
+        val dx = (mousePosition.x - oldPosition.x).toDouble()
+        val xDir = sign(dx)
+        val dy = (mousePosition.y - oldPosition.y).toDouble()
+        val yDir = sign(dy)
+        val theta = Math.atan(dy/dx) * xDir * yDir
+        val maxMovement = 20
+        val x = oldPosition.x + xDir*(Math.cos(theta) * maxMovement)
+        val y = oldPosition.y + yDir*(Math.sin(theta) * maxMovement)
+//        System.out.println(theta * 180/(2 * PI))
+        return Position(x.toInt(), y.toInt())
+    }
+
+    fun collideWithSelf(calculatedPosition: Position, previousPositions: ArrayDeque<Position>): Boolean {
+//        System.out.println("checking for tail biting")
+        return previousPositions.find{position ->
+            (position.x - calculatedPosition.x).toDouble().pow(2) - (position.y - calculatedPosition.y).toDouble().pow(2) < 20.0.pow(2)
+        } === null
+    }
+
+
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
         val thisPlayerState = PlayerState(
@@ -95,19 +117,30 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
                             val find = coordRegex.find(it.payloadAsText)
                             if (find != null) {
                                 val (x, y) = find.destructured
-                                val currentCoordinate = Position(x.toInt(), y.toInt())
-                                if (thisPlayerState.positions.size >= 10) thisPlayerState.positions.pop()
-                                thisPlayerState.positions.addLast(currentCoordinate)
-                                val obstacles = arrayListOf<Position>()
-                                gameState.recent = null
-                                gameState.playerStates.forEach{user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions)}
-                                val collisions = obstacles.filter{position -> collision(position, currentCoordinate) }
-                                if (collisions.isNotEmpty()) {
-                                    safeDots.collidees.addAll(collisions)
-                                    waitOneSec(collisions)
-                                    gameState.recent = Position(x.toInt(), y.toInt())
+                                val mouseCoordinate = Position(x.toInt(), y.toInt())
+                                var currentCoordinate: Position
+//                                System.out.println(calculatePosition(currentCoordinate, thisPlayerState.positions.last))
+                                if (thisPlayerState.positions.size > 0) {
+                                    currentCoordinate = calculatePosition(mouseCoordinate, thisPlayerState.positions.last)
                                 }
-                                sink?.next(Unit)
+                                else {
+                                    currentCoordinate = mouseCoordinate
+                                }
+//                                if (collideWithSelf(currentCoordinate, thisPlayerState.positions)) {
+//                                    System.out.println("no tail biting here")
+                                    if (thisPlayerState.positions.size >= 10) thisPlayerState.positions.pop()
+                                    thisPlayerState.positions.addLast(currentCoordinate)
+                                    val obstacles = arrayListOf<Position>()
+                                    gameState.recent = null
+                                    gameState.playerStates.forEach{user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions)}
+                                    val collisions = obstacles.filter{position -> collision(position, currentCoordinate) }
+                                    if (collisions.isNotEmpty()) {
+                                        safeDots.collidees.addAll(collisions)
+                                        waitOneSec(collisions)
+                                        gameState.recent = currentCoordinate
+                                    }
+                                    sink?.next(Unit)
+//                                }
                             }
                             it.payloadAsText
                         }

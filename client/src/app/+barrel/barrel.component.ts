@@ -43,7 +43,7 @@ console.log("`Barrel` component loaded asynchronously");
 @Component({
   selector: "barrel",
   template: `
-    <h1>Hello from Barrel</h1>
+    <h1>Worm world</h1>
     <span>
       <a [routerLink]="['./child-barrel']">
         Child Barrel
@@ -109,9 +109,32 @@ export class BarrelComponent implements OnInit, OnDestroy {
     );
   }
 
+  private drawEyes(position: IPosition) {
+    const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
+    const imgSrc = "../../../assets/img/googlyEyes.png";
+    this.context.globalAlpha = 1;
+    var img = new Image();
+    img.src = imgSrc;
+    this.context.drawImage(
+      img,
+      position.x - left - 20,
+      position.y - top - window.scrollY - 20,
+      40,
+      40
+    );
+  }
+
   private stringtoCoords(str: string): IPosition {
     const [x, y] = str.split(",");
     return { x: +x, y: +y };
+  }
+
+  private tooSlow(oldPosition: IPosition, newPosition: IPosition): boolean {
+    return (
+      (oldPosition.x - newPosition.x) ** 2 +
+        (oldPosition.y - newPosition.y) ** 2 <
+      20 ** 2
+    );
   }
 
   @ViewChild("pre", { read: ElementRef })
@@ -167,7 +190,6 @@ export class BarrelComponent implements OnInit, OnDestroy {
                   };
                 }
               )
-            // collision: bang
           };
           this.gameStates$.next(game);
           if (bang.x !== -100 && bang.y !== -100) {
@@ -187,7 +209,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
       this.collisions.add(collision);
       setTimeout(() => {
         this.collisions.delete(collision);
-      }, 1000);
+      }, 100);
     });
 
     interval(0, animationFrameScheduler)
@@ -203,6 +225,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
           playerState.position.forEach((coords, idx) => {
             this.draw(colour, coords, idx / 10);
           });
+          this.drawEyes(playerState.position[playerState.position.length - 1]);
         });
         this.collisions.forEach(collision => {
           this.drawCollsion(collision.position);
@@ -211,8 +234,8 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
     this.mouseEvents$
       .pipe(
-        distinctUntilChanged(
-          (a: IPosition, b: IPosition) => a.x === b.x && a.y === b.y
+        distinctUntilChanged((a: IPosition, b: IPosition) =>
+          this.tooSlow(a, b)
         ),
         takeUntil(this.destroy$)
       )
