@@ -55,6 +55,7 @@ console.log("`Barrel` component loaded asynchronously");
       width="1000"
       height="800"
       style="border:1px solid"
+      style="background: url('../../../assets/img/underground-design-grass-illustration-79894081.jpg'); background-size: 1000px 800px"
     ></canvas>
     <pre>{{ gameStates$ | async | json }}</pre>
     <router-outlet></router-outlet>
@@ -66,6 +67,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
   private readonly destroy$: Subject<void> = new Subject<void>();
   private readonly collision$: Subject<ICollision> = new Subject<ICollision>();
   private readonly collisions: Set<ICollision> = new Set<ICollision>();
+  private frontDot: IPosition = null;
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
     HTMLCanvasElement
@@ -88,7 +90,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
       0,
       2 * Math.PI
     );
-    this.context.strokeStyle = colour;
+    this.context.strokeStyle = "black";
     this.context.stroke();
     this.context.fillStyle = colour;
     this.context.fill();
@@ -122,6 +124,16 @@ export class BarrelComponent implements OnInit, OnDestroy {
       40,
       40
     );
+  }
+
+  private drawBackground() {
+    const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
+    const imgSrc =
+      "../../../assets/img/underground-design-grass-illustration-79894081.jpg";
+    this.context.globalAlpha = 1;
+    var img = new Image();
+    img.src = imgSrc;
+    this.context.drawImage(img, 0, 0, 1000, 800);
   }
 
   private stringtoCoords(str: string): IPosition {
@@ -220,10 +232,11 @@ export class BarrelComponent implements OnInit, OnDestroy {
       .subscribe(([, gameState]: [never, IGameState]) => {
         // console.log(gameState);
         this.context.clearRect(0, 0, 1000, 800);
+        // this.drawBackground();
         gameState.playerStates.forEach(playerState => {
           let colour = playerState.colour;
           playerState.position.forEach((coords, idx) => {
-            this.draw(colour, coords, idx / 10);
+            this.draw(colour, coords, idx / 4);
           });
           this.drawEyes(playerState.position[playerState.position.length - 1]);
         });

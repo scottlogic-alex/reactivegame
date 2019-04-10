@@ -1,16 +1,19 @@
 package com.scottlogic.reactivegame
 
+import org.springframework.beans.factory.DisposableBean
+import org.springframework.beans.factory.InitializingBean
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.socket.WebSocketHandler
 import org.springframework.web.reactive.socket.WebSocketMessage
 import org.springframework.web.reactive.socket.WebSocketSession
+import reactor.core.Disposable
 import reactor.core.publisher.*
 import java.util.*
 import reactor.core.publisher.Flux
+import java.time.Duration
 import kotlin.collections.ArrayList
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
-import kotlin.math.sign
 import kotlin.random.Random
 import kotlin.random.nextUBytes
 
@@ -25,8 +28,10 @@ data class Position (
 
 data class PlayerState @ExperimentalUnsignedTypes constructor(
         val username: String,
-        var positions: ArrayDeque<Position>,
-        val colourBytes: UByteArray
+        val positions: ArrayDeque<Position>,
+        val colourBytes: UByteArray,
+        val mousePosition: Position,
+        var angle: Double
 )
 
  data class GameState (
@@ -36,9 +41,26 @@ data class PlayerState @ExperimentalUnsignedTypes constructor(
 
 
 @Component
-class WutHandler: WebSocketHandler/*, InitializingBean*/ {
+class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
+
+    override fun afterPropertiesSet() {
+        disposableSubscription = physicsUpdate.subscribe{
+            gameState.playerStates.forEach { thisPlayerState ->
+                if (thisPlayerState.positions.size > 0) {
+                    val newLocation: Position = calculatePosition(thisPlayerState)
+                    updatePositions(thisPlayerState, newLocation)
+            }
+            }
+        }
+    }
+
+    override fun destroy() {
+        System.out.println("destroying")
+        disposableSubscription?.dispose()
+    }
+
     val gameState: GameState = GameState(playerStates = mutableListOf(), recent = null)
-    var safeDots: Collisions = Collisions(collidees = ArrayList())
+    val safeDots: Collisions = Collisions(collidees = ArrayList())
     val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
     var sink: FluxSink<Unit>? = null
 //    val sink = EmitterProcessor.create<Unit>().sink()
@@ -46,7 +68,8 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
         sink = it
         it.next(Unit)
     }.publish().autoConnect() //.share()
-
+    val physicsUpdate = Flux.interval(Duration.ofMillis(100L)).publish().autoConnect()
+    var disposableSubscription: Disposable? = null
 
     @ExperimentalUnsignedTypes
     fun getColour(channels: UByteArray): String {
@@ -55,41 +78,96 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
     }
 
     fun collision(existing: Position, toDraw: Position): Boolean {
-        if (safeDots.collidees.find{position -> (position.x === existing.x && position.y === existing.y) } === null) {
-            return (
-                    (existing.x - toDraw.x).toDouble().pow(2) + (existing.y - toDraw.y).toDouble().pow(2) < 20.0.pow(2)
-                    )
+        synchronized(safeDots.collidees) {
+            if (safeDots.collidees.find { position -> position.x == existing.x && position.y == existing.y } == null) {
+                return (
+                        (existing.x - toDraw.x).toDouble().pow(2) + (existing.y - toDraw.y).toDouble().pow(2) < 20.0.pow(2)
+                        )
+            }
         }
         return false
     }
 
     fun waitOneSec(coordinates: List<Position>){
         val timer = Timer()
-        System.out.println(safeDots.collidees)
+//        System.out.println(safeDots.collidees)
         timer.schedule(timerTask{
-            safeDots.collidees.removeAll(coordinates)
+            synchronized(safeDots.collidees) {
+                safeDots.collidees.removeAll(coordinates)
+            }
         }, 1000)
     }
 
-    fun calculatePosition(mousePosition: Position, oldPosition: Position): Position {
-        val dx = (mousePosition.x - oldPosition.x).toDouble()
-        val xDir = sign(dx)
-        val dy = (mousePosition.y - oldPosition.y).toDouble()
-        val yDir = sign(dy)
-        val theta = Math.atan(dy/dx) * xDir * yDir
+    fun calculatePosition(thisPlayerState: PlayerState): Position {
+        val oldPosition = thisPlayerState.positions.last()
+        val dx = (thisPlayerState.mousePosition.x - oldPosition.x).toDouble()
+        val dy = (thisPlayerState.mousePosition.y - oldPosition.y).toDouble()
+        var theta = Math.atan2(dy, dx)
+
+        val maxAngle = 0.628319
+
+        val compromise: Double
+        val current = thisPlayerState.angle + Math.PI
+        val intended = theta + Math.PI
+        val upper = current + maxAngle
+        val lower = current - maxAngle
+
+        if (Math.abs(intended - current) < Math.PI) {
+            if (intended >= current) {
+                compromise = Math.min(intended, upper) - Math.PI
+            } else {
+                compromise = Math.max(intended, lower) - Math.PI
+            }
+        } else {
+            if (intended >= current) {
+                if (lower > 0) {
+                    compromise = lower - Math.PI
+                } else {
+                    compromise = lower + Math.PI
+                }
+            } else {
+                if (upper < 2*Math.PI) {
+                    compromise = upper - Math.PI
+                } else {
+                    compromise = upper - 3*Math.PI
+                }
+            }
+        }
+//        System.out.println("${current}, ${intended}, ${upper}, ${lower}, ${compromise}")
+
+        thisPlayerState.angle = compromise
         val maxMovement = 20
-        val x = oldPosition.x + xDir*(Math.cos(theta) * maxMovement)
-        val y = oldPosition.y + yDir*(Math.sin(theta) * maxMovement)
-//        System.out.println(theta * 180/(2 * PI))
+        val x = oldPosition.x + (Math.cos(compromise) * maxMovement)
+        val y = oldPosition.y + (Math.sin(compromise) * maxMovement)
         return Position(x.toInt(), y.toInt())
     }
 
-    fun collideWithSelf(calculatedPosition: Position, previousPositions: ArrayDeque<Position>): Boolean {
-//        System.out.println("checking for tail biting")
-        return previousPositions.find{position ->
-            (position.x - calculatedPosition.x).toDouble().pow(2) - (position.y - calculatedPosition.y).toDouble().pow(2) < 20.0.pow(2)
-        } === null
+    fun updatePositions(thisPlayerState: PlayerState, currentCoordinate: Position) {
+//        if (!collideWithSelf(currentCoordinate, thisPlayerState.positions)) {
+            if (thisPlayerState.positions.size >= 10) thisPlayerState.positions.pop()
+            thisPlayerState.positions.addLast(currentCoordinate)
+            val obstacles = arrayListOf<Position>()
+            gameState.recent = null
+            gameState.playerStates.forEach { user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions) }
+            val collisions = obstacles.filter { position -> collision(position, currentCoordinate) }
+            if (collisions.isNotEmpty()) {
+                synchronized(safeDots.collidees) {
+                    safeDots.collidees.addAll(collisions)
+                }
+                waitOneSec(collisions)
+                gameState.recent = currentCoordinate
+            }
+            sink?.next(Unit)
+//        }
     }
+//
+//    fun collideWithSelf(calculatedPosition: Position, previousPositions: ArrayDeque<Position>): Boolean {
+//        if (previousPositions.size <= 1) return false
+////        previousPositions.removeLast()
+//        return previousPositions.find{position ->
+//            (position.x - calculatedPosition.x).toDouble().pow(2) + (position.y - calculatedPosition.y).toDouble().pow(2) <= 19.0.pow(2)
+//        } !== null
+//    }
 
 
     @ExperimentalUnsignedTypes
@@ -97,7 +175,9 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
         val thisPlayerState = PlayerState(
                 username = UUID.randomUUID().toString(),
                 positions = ArrayDeque(), //Position(0, 0),
-                colourBytes = Random.nextUBytes(3)
+                colourBytes = Random.nextUBytes(3),
+                mousePosition = Position(-1, -1),
+                angle = 0.0
         )
         gameState.playerStates += thisPlayerState
 
@@ -109,42 +189,30 @@ class WutHandler: WebSocketHandler/*, InitializingBean*/ {
                             "${player.username}, ${getColour(player.colourBytes)}, " +
                                     player.positions.joinToString("_") { position -> "${position.x},${position.y}" }
                         } + "/${gameState.recent?.x ?: -100}, ${gameState.recent?.y ?: -100}"}
-                        .log()
                         .map(session::textMessage)
+
         ).and(
                 session.receive()
                         .map {
                             val find = coordRegex.find(it.payloadAsText)
                             if (find != null) {
                                 val (x, y) = find.destructured
-                                val mouseCoordinate = Position(x.toInt(), y.toInt())
+                                thisPlayerState.mousePosition.x = x.toInt()
+                                thisPlayerState.mousePosition.y = y.toInt()
                                 var currentCoordinate: Position
 //                                System.out.println(calculatePosition(currentCoordinate, thisPlayerState.positions.last))
                                 if (thisPlayerState.positions.size > 0) {
-                                    currentCoordinate = calculatePosition(mouseCoordinate, thisPlayerState.positions.last)
+                                    currentCoordinate = calculatePosition(thisPlayerState)
                                 }
                                 else {
-                                    currentCoordinate = mouseCoordinate
+                                    currentCoordinate = thisPlayerState.mousePosition
                                 }
-//                                if (collideWithSelf(currentCoordinate, thisPlayerState.positions)) {
-//                                    System.out.println("no tail biting here")
-                                    if (thisPlayerState.positions.size >= 10) thisPlayerState.positions.pop()
-                                    thisPlayerState.positions.addLast(currentCoordinate)
-                                    val obstacles = arrayListOf<Position>()
-                                    gameState.recent = null
-                                    gameState.playerStates.forEach{user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions)}
-                                    val collisions = obstacles.filter{position -> collision(position, currentCoordinate) }
-                                    if (collisions.isNotEmpty()) {
-                                        safeDots.collidees.addAll(collisions)
-                                        waitOneSec(collisions)
-                                        gameState.recent = currentCoordinate
-                                    }
-                                    sink?.next(Unit)
-//                                }
+                                updatePositions(thisPlayerState, currentCoordinate)
                             }
                             it.payloadAsText
                         }
                         .then<WebSocketMessage>(Mono.create{
+                            System.err.println("connection closing")
                             gameState.playerStates -= thisPlayerState
                             sink?.next(Unit)
                         })
