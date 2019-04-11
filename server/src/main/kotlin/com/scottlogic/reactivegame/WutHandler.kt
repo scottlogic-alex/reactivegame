@@ -212,11 +212,13 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                             it.payloadAsText
                         }
                         .then<WebSocketMessage>(Mono.create{
-                            System.err.println("connection closing")
                             gameState.playerStates -= thisPlayerState
                             sink?.next(Unit)
                         })
-        )
+        ).doAfterTerminate{
+            gameState.playerStates -= thisPlayerState
+            sink?.next(Unit)
+        }
     }
 
 }

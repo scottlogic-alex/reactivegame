@@ -1,18 +1,20 @@
 package com.scottlogic.reactivegame
 
+import io.netty.channel.ChannelOption
+import io.netty.handler.timeout.ReadTimeoutHandler
+import io.netty.handler.timeout.WriteTimeoutHandler
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory
+import org.springframework.boot.web.embedded.netty.NettyServerCustomizer
+import org.springframework.boot.web.server.WebServerFactoryCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.HandlerMapping
-import reactor.core.publisher.Mono
 import org.springframework.web.reactive.handler.SimpleUrlHandlerMapping
 import org.springframework.web.reactive.socket.WebSocketHandler
 import org.springframework.web.reactive.socket.server.support.WebSocketHandlerAdapter
-import org.springframework.beans.factory.annotation.Autowired
-
-
+import reactor.netty.http.server.HttpServer
+import reactor.netty.tcp.TcpServer
 
 
 /**
@@ -31,6 +33,36 @@ class WebSocketHandlers {
         return mapping
     }
 
+//    @Bean
+//    fun webSocketService(): WebSocketService {
+//        val strategy = TomcatRequestUpgradeStrategy()
+//        strategy.setMaxSessionIdleTimeout(10000L)
+//        return HandshakeWebSocketService(strategy)
+//    }
+
     @Bean
     fun handlerAdapter(): WebSocketHandlerAdapter = WebSocketHandlerAdapter()
+
+
+
+
+    @Bean
+    fun serverFactoryCustomizer(): WebServerFactoryCustomizer<NettyReactiveWebServerFactory> {
+        return NettyTimeoutCustomizer()
+    }
+
+
+}
+
+class NettyTimeoutCustomizer: WebServerFactoryCustomizer<NettyReactiveWebServerFactory> {
+
+    override fun customize(factory: NettyReactiveWebServerFactory) {
+        val connectionTimeout = 1
+        val readtimeout = 3000
+        factory.addServerCustomizers(NettyServerCustomizer
+                {server: HttpServer -> server.tcpConfiguration{
+                tcp: TcpServer -> tcp.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,connectionTimeout)
+                .doOnConnection{ connection -> connection.addHandlerLast(ReadTimeoutHandler(readtimeout))}}})
+//        factory.addServerCustomizers(arrayOf<>({server -> server.tcpConfiguration()}))
+    }
 }

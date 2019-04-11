@@ -10,22 +10,13 @@ import {
   interval,
   Subject,
   BehaviorSubject,
-  Observable,
   animationFrameScheduler
 } from "rxjs";
 import {
   takeUntil,
-  bufferCount,
   distinctUntilChanged,
   withLatestFrom,
-  map,
-  startWith,
-  take,
-  filter,
-  windowTime,
-  mergeAll,
-  combineAll,
-  tap
+  retry
 } from "rxjs/operators";
 import {
   WebSocketSubject,
@@ -39,26 +30,17 @@ import {
  */
 
 console.log("`Barrel` component loaded asynchronously");
-
 @Component({
-  selector: "barrel",
   template: `
     <h1>Worm world</h1>
-    <span>
-      <a [routerLink]="['./child-barrel']">
-        Child Barrel
-      </a>
-    </span>
-    <div>{{ this.X }}, {{ this.Y }}</div>
     <canvas
       #myCanvas
-      width="1000"
-      height="800"
+      width="{{ this.width }}"
+      height="{{ this.height }}"
       style="border:1px solid"
-      style="background: url('../../../assets/img/underground-design-grass-illustration-79894081.jpg'); background-size: 1000px 800px"
+      style="background: url('../../../assets/img/underground-design-grass-illustration-79894081.jpg'); background-size: contain"
     ></canvas>
     <pre>{{ gameStates$ | async | json }}</pre>
-    <router-outlet></router-outlet>
   `
   // <button (click)="getColour()">change colour!</button>
 })
@@ -67,7 +49,8 @@ export class BarrelComponent implements OnInit, OnDestroy {
   private readonly destroy$: Subject<void> = new Subject<void>();
   private readonly collision$: Subject<ICollision> = new Subject<ICollision>();
   private readonly collisions: Set<ICollision> = new Set<ICollision>();
-  private frontDot: IPosition = null;
+  public width: number = 2000;
+  public height: number = 1000;
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
     HTMLCanvasElement
@@ -126,16 +109,6 @@ export class BarrelComponent implements OnInit, OnDestroy {
     );
   }
 
-  private drawBackground() {
-    const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
-    const imgSrc =
-      "../../../assets/img/underground-design-grass-illustration-79894081.jpg";
-    this.context.globalAlpha = 1;
-    var img = new Image();
-    img.src = imgSrc;
-    this.context.drawImage(img, 0, 0, 1000, 800);
-  }
-
   private stringtoCoords(str: string): IPosition {
     const [x, y] = str.split(",");
     return { x: +x, y: +y };
@@ -153,7 +126,6 @@ export class BarrelComponent implements OnInit, OnDestroy {
   private pre: IElementRef<HTMLPreElement>;
   public gameStates$: Subject<IGameState> = new BehaviorSubject<IGameState>({
     playerStates: []
-    // collision: { x: -100, y: -100 }
   });
 
   private coordRegex: RegExp = /^([\w-]+), (#[A-Z\d]{6}), ([\d,_]+)$/;
@@ -214,6 +186,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
       },
       () => {
         console.warn("closing connection");
+        retry();
       }
     );
 
@@ -231,7 +204,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
       )
       .subscribe(([, gameState]: [never, IGameState]) => {
         // console.log(gameState);
-        this.context.clearRect(0, 0, 1000, 800);
+        this.context.clearRect(0, 0, this.width, this.height);
         // this.drawBackground();
         gameState.playerStates.forEach(playerState => {
           let colour = playerState.colour;
@@ -258,9 +231,9 @@ export class BarrelComponent implements OnInit, OnDestroy {
           top
         } = this.myCanvas.nativeElement.getBoundingClientRect();
         if (
-          position.x < left + 1000 &&
+          position.x < left + this.width &&
           position.x > left &&
-          position.y < top + 800 &&
+          position.y < top + this.height &&
           position.y > top
         ) {
           this.clientWebSocket$.next(
