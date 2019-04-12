@@ -1,8 +1,8 @@
 package com.scottlogic.reactivegame
 
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.server.ServerHttpRequest
+import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
 
 data class Lol(
@@ -14,5 +14,23 @@ data class Lol(
 class LolController {
     @GetMapping
     fun getLol(): Mono<Lol> = Mono.just(Lol("lol"))
+
+    @Autowired
+    private lateinit var userRepository: UserRepository
+
+    @GetMapping("/name/{name}")
+    fun getUserByName(@PathVariable name: String): User? {
+        return userRepository.findByName(name)
+    }
+
+    @GetMapping("/host")
+    fun getUserByHost(request: ServerHttpRequest): User? {
+        return userRepository.findByHost(request.remoteAddress.hostName)
+    }
+
+    @PostMapping("/")
+    fun addUser(user: User) {
+        return userRepository.save(user)
+    }
 
 }

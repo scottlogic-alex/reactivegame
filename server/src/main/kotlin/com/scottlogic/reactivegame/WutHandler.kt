@@ -2,6 +2,7 @@ package com.scottlogic.reactivegame
 
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.InitializingBean
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.socket.WebSocketHandler
 import org.springframework.web.reactive.socket.WebSocketMessage
@@ -29,7 +30,7 @@ data class Position (
 data class PlayerState @ExperimentalUnsignedTypes constructor(
         val username: String,
         val positions: ArrayDeque<Position>,
-        val colourBytes: UByteArray,
+        val colour: String,
         val mousePosition: Position,
         var angle: Double
 )
@@ -45,11 +46,13 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
 
     override fun afterPropertiesSet() {
         disposableSubscription = physicsUpdate.subscribe{
-            gameState.playerStates.forEach { thisPlayerState ->
-                if (thisPlayerState.positions.size > 0) {
-                    val newLocation: Position = calculatePosition(thisPlayerState)
-                    updatePositions(thisPlayerState, newLocation)
-            }
+            synchronized(gameState.playerStates){
+                gameState.playerStates.forEach { thisPlayerState ->
+                    if (thisPlayerState.positions.size > 0) {
+                        val newLocation: Position = calculatePosition(thisPlayerState)
+                        updatePositions(thisPlayerState, newLocation)
+                    }
+                }
             }
         }
     }
@@ -59,17 +62,18 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         disposableSubscription?.dispose()
     }
 
-    val gameState: GameState = GameState(playerStates = mutableListOf(), recent = null)
-    val safeDots: Collisions = Collisions(collidees = ArrayList())
-    val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
-    var sink: FluxSink<Unit>? = null
-//    val sink = EmitterProcessor.create<Unit>().sink()
-    val gameChanges = Flux.create<Unit>{
+    private val gameState: GameState = GameState(playerStates = mutableListOf(), recent = null)
+    private val safeDots: Collisions = Collisions(collidees = ArrayList())
+    private val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
+    private var sink: FluxSink<Unit>? = null
+    private val gameChanges = Flux.create<Unit>{
         sink = it
         it.next(Unit)
     }.publish().autoConnect() //.share()
-    val physicsUpdate = Flux.interval(Duration.ofMillis(100L)).publish().autoConnect()
-    var disposableSubscription: Disposable? = null
+    private val physicsUpdate = Flux.interval(Duration.ofMillis(100L)).publish().autoConnect()
+    private var disposableSubscription: Disposable? = null
+    @Autowired
+    private lateinit var userRepository: UserRepository
 
     @ExperimentalUnsignedTypes
     fun getColour(channels: UByteArray): String {
@@ -148,7 +152,9 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             thisPlayerState.positions.addLast(currentCoordinate)
             val obstacles = arrayListOf<Position>()
             gameState.recent = null
-            gameState.playerStates.forEach { user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions) }
+            synchronized(gameState.playerStates){
+                gameState.playerStates.forEach { user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions) }
+            }
             val collisions = obstacles.filter { position -> collision(position, currentCoordinate) }
             if (collisions.isNotEmpty()) {
                 synchronized(safeDots.collidees) {
@@ -172,23 +178,59 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
 
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
+//        return userRepository.get()
+//                .then(user -> {
+//
+//        })
+
+        var user: User? = null
+        var host: String? = session.handshakeInfo.remoteAddress?.address?.hostName
+        if (host !== null) {
+            user = userRepository.findByHost(host)
+        }
+
+        println(user)
+
+        var userId: String
+        var colour: String
+
+        if (user !== null) {
+            userId = user.id
+            colour = user.colour
+        } else {
+            userId = UUID.randomUUID().toString()
+            colour = getColour(Random.nextUBytes(3))
+            if (host !== null) {
+
+                userRepository.save(User(userId, userId, colour, host))
+            }
+        }
+
         val thisPlayerState = PlayerState(
-                username = UUID.randomUUID().toString(),
+                username = userId,
                 positions = ArrayDeque(), //Position(0, 0),
-                colourBytes = Random.nextUBytes(3),
+                colour = colour,
                 mousePosition = Position(-1, -1),
                 angle = 0.0
         )
-        gameState.playerStates += thisPlayerState
+        synchronized(gameState.playerStates) {
+            gameState.playerStates += thisPlayerState
+        }
+
+//session.handshakeInfo.remoteAddress.address.hostName
 
         sink?.next(Unit)
 
         return session.send(
                 gameChanges
-                        .map { gameState.playerStates.joinToString(":") { player ->
-                            "${player.username}, ${getColour(player.colourBytes)}, " +
-                                    player.positions.joinToString("_") { position -> "${position.x},${position.y}" }
-                        } + "/${gameState.recent?.x ?: -100}, ${gameState.recent?.y ?: -100}"}
+                        .map {
+                            synchronized(gameState.playerStates) {
+                                gameState.playerStates.joinToString(":") { player ->
+                                    "${player.username}, ${player.colour}, " +
+                                            player.positions.joinToString("_") { position -> "${position.x},${position.y}" }
+                                } + "/${gameState.recent?.x ?: -100}, ${gameState.recent?.y ?: -100}"
+                            }
+                        }
                         .map(session::textMessage)
 
         ).and(
@@ -212,12 +254,16 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                             it.payloadAsText
                         }
                         .then<WebSocketMessage>(Mono.create{
-                            gameState.playerStates -= thisPlayerState
-                            sink?.next(Unit)
+                            synchronized(gameState.playerStates) {
+                                gameState.playerStates -= thisPlayerState
+                                sink?.next(Unit)
+                            }
                         })
         ).doAfterTerminate{
-            gameState.playerStates -= thisPlayerState
-            sink?.next(Unit)
+            synchronized(gameState.playerStates) {
+                gameState.playerStates -= thisPlayerState
+                sink?.next(Unit)
+            }
         }
     }
 
