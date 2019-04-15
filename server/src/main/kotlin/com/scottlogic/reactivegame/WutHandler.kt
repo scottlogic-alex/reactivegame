@@ -28,7 +28,7 @@ data class Position (
 )
 
 data class PlayerState @ExperimentalUnsignedTypes constructor(
-        val username: String,
+        var username: String,
         val userId: String,
         val positions: ArrayDeque<Position>,
         var colour: String,
@@ -57,9 +57,15 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             }
         }
 
-        colourUpdateSubscription = userUpdate.userChanges.subscribe{
+        colourUpdateSubscription = userColourUpdate.colourChanges.subscribe{
             val player = gameState.playerStates.find { player -> player.userId == it.userId }
             if (player != null) player.colour = it.colour
+            sink?.next(Unit)
+        }
+
+        nameUpdateSubscription = userNameUpdate.nameChanges.subscribe{
+            val player = gameState.playerStates.find { player -> player.userId == it.userId }
+            if (player != null) player.username = it.userName
             sink?.next(Unit)
         }
     }
@@ -80,13 +86,14 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     }.publish().autoConnect() //.share()
     private val physicsUpdate = Flux.interval(Duration.ofMillis(100L)).publish().autoConnect()
     private var colourUpdateSubscription: Disposable? = null
-
+    private var nameUpdateSubscription: Disposable? = null
     private var disposableSubscription: Disposable? = null
     @Autowired
     private lateinit var userRepository: UserRepository
-
     @Autowired
-    private lateinit var userUpdate: UserUpdate
+    private lateinit var userNameUpdate: UserNameUpdate
+    @Autowired
+    private lateinit var userColourUpdate: UserColourUpdate
 
     @ExperimentalUnsignedTypes
     fun getColour(channels: UByteArray): String {

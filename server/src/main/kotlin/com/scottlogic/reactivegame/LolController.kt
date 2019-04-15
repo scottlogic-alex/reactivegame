@@ -19,7 +19,10 @@ class LolController {
     private lateinit var userRepository: UserRepository
 
     @Autowired
-    private lateinit var userUpdate: UserUpdate
+    private lateinit var userColourUpdate: UserColourUpdate
+
+    @Autowired
+    private lateinit var userNameUpdate: UserNameUpdate
 
     @GetMapping("/name/{name}")
     fun getUserByName(@PathVariable name: String): User? {
@@ -39,12 +42,14 @@ class LolController {
     @PutMapping("/host/colour")
     fun updateColourByHost(@RequestBody colour: String, request: ServerHttpRequest) {
         val user = userRepository.findByHost(request.remoteAddress!!.hostName)
-        userUpdate.updateSink?.next(ColourUpdate(colour = colour,  userId = user!!.id))
+        userColourUpdate.colourSink?.next(ColourUpdate(colour = colour,  userId = user!!.id))
         return userRepository.updateUserSetColourForHost(colour, request.remoteAddress!!.hostName)
     }
 
     @PutMapping("/host/name")
     fun updateUsernameByHost(@RequestBody username: String, request: ServerHttpRequest) {
+        val user = userRepository.findByHost(request.remoteAddress!!.hostName)
+        userNameUpdate.nameSink?.next(NameUpdate(userName = username, userId = user!!.id))
         return userRepository.updateUserSetUsernameForHost(username, request.remoteAddress!!.hostName)
     }
 

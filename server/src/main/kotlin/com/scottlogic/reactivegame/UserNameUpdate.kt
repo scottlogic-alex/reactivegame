@@ -5,16 +5,14 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.FluxSink
 
 @Component
-class UserUpdate {
-
-    var updateSink: FluxSink<ColourUpdate>? = null
-    val userChanges = Flux.create<ColourUpdate> {
-        updateSink = it
+class UserNameUpdate {
+    var nameSink: FluxSink<NameUpdate>? = null
+    val nameChanges = Flux.create<NameUpdate> {
+        nameSink = it
     }.publish().autoConnect()
-
 }
 
-data class ColourUpdate(
+data class NameUpdate(
         val userId: String,
-        val colour: String
+        val userName: String
 )
