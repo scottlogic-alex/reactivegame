@@ -4,7 +4,9 @@ import {
   OnDestroy,
   ElementRef,
   ViewChild,
-  HostListener
+  HostListener,
+  Input,
+  NgModule
 } from "@angular/core";
 import {
   interval,
@@ -23,6 +25,7 @@ import {
   webSocket,
   WebSocketSubjectConfig
 } from "rxjs/websocket";
+import { AppState } from "../app.service";
 /**
  * We're loading this component asynchronously
  * We are using some magic with es6-promise-loader that will wrap the module with a Promise
@@ -31,26 +34,20 @@ import {
 
 console.log("`Barrel` component loaded asynchronously");
 @Component({
-  template: `
-    <h1>Worm world</h1>
-    <canvas
-      #myCanvas
-      width="{{ this.width }}"
-      height="{{ this.height }}"
-      style="border:1px solid"
-      style="background: url('../../../assets/img/underground-design-grass-illustration-79894081.jpg'); background-size: contain"
-    ></canvas>
-    <pre>{{ gameStates$ | async | json }}</pre>
-  `
-  // <button (click)="getColour()">change colour!</button>
+  templateUrl: "./barrel.component.html",
+  styleUrls: ["./barrel.component.css"]
 })
 export class BarrelComponent implements OnInit, OnDestroy {
+  constructor(private appService: AppState) {}
+
   private clientWebSocket$: WebSocketSubject<string>;
   private readonly destroy$: Subject<void> = new Subject<void>();
   private readonly collision$: Subject<ICollision> = new Subject<ICollision>();
   private readonly collisions: Set<ICollision> = new Set<ICollision>();
   public width: number = 2000;
   public height: number = 1000;
+  public color: string = "";
+  public username: string = "";
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
     HTMLCanvasElement
@@ -59,6 +56,18 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.context = this.myCanvas.nativeElement.getContext("2d");
+  }
+
+  public changeColour() {
+    // console.log(this.color);
+    this.appService
+      .updateColour(this.color)
+      .subscribe(/*response => console.log(response)*/);
+  }
+
+  public setUsername() {
+    console.log(this.username);
+    this.appService.updateUsername(this.username).subscribe();
   }
 
   private draw(colour, position, transparency: number) {
@@ -128,7 +137,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     playerStates: []
   });
 
-  private coordRegex: RegExp = /^([\w-]+), (#[A-Z\d]{6}), ([\d,_]+)$/;
+  private coordRegex: RegExp = /^([\w-]+), (#[A-Za-z\d]{6}), ([\d,_]+)$/;
 
   @HostListener("mousemove", ["$event"])
   onMousemove(event: MouseEvent) {
@@ -165,6 +174,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
               .map(
                 (match): IPlayerState => {
                   const [, username, colour, positionsString] = match;
+                  // this.color = colour;
                   return {
                     username,
                     position: positionsString

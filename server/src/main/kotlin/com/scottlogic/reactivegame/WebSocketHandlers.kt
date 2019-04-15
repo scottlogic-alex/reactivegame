@@ -15,6 +15,9 @@ import org.springframework.web.reactive.socket.WebSocketHandler
 import org.springframework.web.reactive.socket.server.support.WebSocketHandlerAdapter
 import reactor.netty.http.server.HttpServer
 import reactor.netty.tcp.TcpServer
+import org.springframework.web.cors.reactive.CorsWebFilter
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 
 
 /**
@@ -43,7 +46,20 @@ class WebSocketHandlers {
     @Bean
     fun handlerAdapter(): WebSocketHandlerAdapter = WebSocketHandlerAdapter()
 
+    @Bean
+    fun corsWebFilter(): CorsWebFilter {
+        val corsConfig = CorsConfiguration()
+        corsConfig.allowedOrigins = listOf("*")
+        corsConfig.maxAge = 8000L
+        corsConfig.allowedMethods = listOf("OPTIONS", "GET", "PUT", "POST", "DELETE")
+        corsConfig.allowedHeaders = listOf("X-Requested-With", "Origin", "Content-Type", "Accept", "Authorization")
+        corsConfig.allowCredentials = true
 
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", corsConfig)
+
+        return CorsWebFilter(source)
+    }
 
 
     @Bean

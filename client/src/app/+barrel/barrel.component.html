@@ -1,0 +1,17 @@
+<h1>Worm world</h1>
+<div>
+  <input [(ngModel)]="username" />
+  <button (click)="setUsername()">set username</button>
+</div>
+<div>
+  <input [(colorPicker)]="color" [style.background]="color" />
+  <button (click)="changeColour()">change colour</button>
+</div>
+<canvas
+  #myCanvas
+  width="{{ this.width }}"
+  height="{{ this.height }}"
+  style="border:1px solid"
+  style="background: url('../../../assets/img/underground-design-grass-illustration-79894081.jpg'); background-size: contain"
+></canvas>
+<pre>{{ gameStates$ | async | json }}</pre>

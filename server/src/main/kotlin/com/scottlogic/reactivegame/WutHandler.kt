@@ -29,8 +29,9 @@ data class Position (
 
 data class PlayerState @ExperimentalUnsignedTypes constructor(
         val username: String,
+        val userId: String,
         val positions: ArrayDeque<Position>,
-        val colour: String,
+        var colour: String,
         val mousePosition: Position,
         var angle: Double
 )
@@ -55,11 +56,18 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                 }
             }
         }
+
+        colourUpdateSubscription = userUpdate.userChanges.subscribe{
+            val player = gameState.playerStates.find { player -> player.userId == it.userId }
+            if (player != null) player.colour = it.colour
+            sink?.next(Unit)
+        }
     }
 
     override fun destroy() {
         System.out.println("destroying")
         disposableSubscription?.dispose()
+        colourUpdateSubscription?.dispose()
     }
 
     private val gameState: GameState = GameState(playerStates = mutableListOf(), recent = null)
@@ -71,9 +79,14 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         it.next(Unit)
     }.publish().autoConnect() //.share()
     private val physicsUpdate = Flux.interval(Duration.ofMillis(100L)).publish().autoConnect()
+    private var colourUpdateSubscription: Disposable? = null
+
     private var disposableSubscription: Disposable? = null
     @Autowired
     private lateinit var userRepository: UserRepository
+
+    @Autowired
+    private lateinit var userUpdate: UserUpdate
 
     @ExperimentalUnsignedTypes
     fun getColour(channels: UByteArray): String {
@@ -178,10 +191,6 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
 
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
-//        return userRepository.get()
-//                .then(user -> {
-//
-//        })
 
         var user: User? = null
         var host: String? = session.handshakeInfo.remoteAddress?.address?.hostName
@@ -192,22 +201,26 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         println(user)
 
         var userId: String
+        var username: String
         var colour: String
 
         if (user !== null) {
             userId = user.id
+            username = user.name
             colour = user.colour
         } else {
             userId = UUID.randomUUID().toString()
+            username = userId
             colour = getColour(Random.nextUBytes(3))
             if (host !== null) {
 
-                userRepository.save(User(userId, userId, colour, host))
+                userRepository.save(User(userId, username, colour, host))
             }
         }
 
         val thisPlayerState = PlayerState(
-                username = userId,
+                userId = userId,
+                username = username,
                 positions = ArrayDeque(), //Position(0, 0),
                 colour = colour,
                 mousePosition = Position(-1, -1),
@@ -218,6 +231,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         }
 
 //session.handshakeInfo.remoteAddress.address.hostName
+
 
         sink?.next(Unit)
 

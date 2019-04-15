@@ -1,4 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable } from "@angular/core";
+import { HttpClient, HttpHeaders } from "@angular/common/http";
+import { Observable } from "rxjs";
 
 export interface InternalStateType {
   [key: string]: any;
@@ -6,41 +8,36 @@ export interface InternalStateType {
 
 @Injectable()
 export class AppState {
+  public _state: InternalStateType = {};
 
-  public _state: InternalStateType = { };
+  constructor(private http: HttpClient) {}
 
-  /**
-   * Already return a clone of the current state.
-   */
-  public get state() {
-    return this._state = this._clone(this._state);
-  }
-  /**
-   * Never allow mutation
-   */
-  public set state(value) {
-    throw new Error('do not mutate the `.state` directly');
+  httpOptions = {
+    headers: new HttpHeaders({ "Content-Type": "application/json" })
+  };
+
+  getUserByName(name: String): Observable<Object> {
+    return this.http
+      .get(`http://ws00100:8080/lol/name/${name}`, this.httpOptions)
+      .pipe();
   }
 
-  public get(prop?: any) {
-    /**
-     * Use our state getter for the clone.
-     */
-    const state = this.state;
-    return state.hasOwnProperty(prop) ? state[prop] : state;
+  getUserByHost(): Observable<Object> {
+    return this.http
+      .get(`http://ws00100:8080/lol/host`, this.httpOptions)
+      .pipe();
   }
 
-  public set(prop: string, value: any) {
-    /**
-     * Internally mutate our state.
-     */
-    return this._state[prop] = value;
+  updateColour(colour: String): Observable<Object> {
+    console.log("sent");
+    return this.http
+      .put(`http://ws00100:8080/lol/host/colour`, colour, this.httpOptions)
+      .pipe();
   }
 
-  private _clone(object: InternalStateType) {
-    /**
-     * Simple object clone.
-     */
-    return JSON.parse(JSON.stringify( object ));
+  updateUsername(username: String): Observable<Object> {
+    return this.http
+      .put(`http://ws00100:8080/lol/host/name`, username, this.httpOptions)
+      .pipe();
   }
 }
