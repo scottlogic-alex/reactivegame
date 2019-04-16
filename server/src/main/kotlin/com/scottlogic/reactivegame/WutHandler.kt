@@ -1,5 +1,6 @@
 package com.scottlogic.reactivegame
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.annotation.Autowired
@@ -58,14 +59,20 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         }
 
         colourUpdateSubscription = userColourUpdate.colourChanges.subscribe{
-            val player = gameState.playerStates.find { player -> player.userId == it.userId }
-            if (player != null) player.colour = it.colour
+            gameState.playerStates.forEach { player ->
+                if (player.userId == it.userId) {
+                    player.colour = it.colour
+                }
+            }
             sink?.next(Unit)
         }
 
         nameUpdateSubscription = userNameUpdate.nameChanges.subscribe{
-            val player = gameState.playerStates.find { player -> player.userId == it.userId }
-            if (player != null) player.username = it.userName
+            gameState.playerStates.forEach { player ->
+                if (player.userId == it.userId) {
+                    player.username = it.userName
+                }
+            }
             sink?.next(Unit)
         }
     }
@@ -76,7 +83,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         colourUpdateSubscription?.dispose()
     }
 
-    private val gameState: GameState = GameState(playerStates = mutableListOf(), recent = null)
+    private val gameState: GameState = GameState(playerStates = mutableListOf(), recent = Position(x = -100, y = -100))
     private val safeDots: Collisions = Collisions(collidees = ArrayList())
     private val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
     private var sink: FluxSink<Unit>? = null
@@ -94,6 +101,8 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     private lateinit var userNameUpdate: UserNameUpdate
     @Autowired
     private lateinit var userColourUpdate: UserColourUpdate
+    @Autowired
+    private lateinit var objectMapper: ObjectMapper
 
     @ExperimentalUnsignedTypes
     fun getColour(channels: UByteArray): String {
@@ -114,7 +123,6 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
 
     fun waitOneSec(coordinates: List<Position>){
         val timer = Timer()
-//        System.out.println(safeDots.collidees)
         timer.schedule(timerTask{
             synchronized(safeDots.collidees) {
                 safeDots.collidees.removeAll(coordinates)
@@ -157,8 +165,6 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                 }
             }
         }
-//        System.out.println("${current}, ${intended}, ${upper}, ${lower}, ${compromise}")
-
         thisPlayerState.angle = compromise
         val maxMovement = 20
         val x = oldPosition.x + (Math.cos(compromise) * maxMovement)
@@ -167,34 +173,23 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     }
 
     fun updatePositions(thisPlayerState: PlayerState, currentCoordinate: Position) {
-//        if (!collideWithSelf(currentCoordinate, thisPlayerState.positions)) {
-            if (thisPlayerState.positions.size >= 10) thisPlayerState.positions.pop()
-            thisPlayerState.positions.addLast(currentCoordinate)
-            val obstacles = arrayListOf<Position>()
-            gameState.recent = null
-            synchronized(gameState.playerStates){
-                gameState.playerStates.forEach { user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions) }
+        if (thisPlayerState.positions.size >= 10) thisPlayerState.positions.pop()
+        thisPlayerState.positions.addLast(currentCoordinate)
+        val obstacles = arrayListOf<Position>()
+        gameState.recent = Position(x = -100, y = -100)
+        synchronized(gameState.playerStates){
+            gameState.playerStates.forEach { user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions) }
+        }
+        val collisions = obstacles.filter { position -> collision(position, currentCoordinate) }
+        if (collisions.isNotEmpty()) {
+            synchronized(safeDots.collidees) {
+                safeDots.collidees.addAll(collisions)
             }
-            val collisions = obstacles.filter { position -> collision(position, currentCoordinate) }
-            if (collisions.isNotEmpty()) {
-                synchronized(safeDots.collidees) {
-                    safeDots.collidees.addAll(collisions)
-                }
-                waitOneSec(collisions)
-                gameState.recent = currentCoordinate
-            }
-            sink?.next(Unit)
-//        }
+            waitOneSec(collisions)
+            gameState.recent = currentCoordinate
+        }
+        sink?.next(Unit)
     }
-//
-//    fun collideWithSelf(calculatedPosition: Position, previousPositions: ArrayDeque<Position>): Boolean {
-//        if (previousPositions.size <= 1) return false
-////        previousPositions.removeLast()
-//        return previousPositions.find{position ->
-//            (position.x - calculatedPosition.x).toDouble().pow(2) + (position.y - calculatedPosition.y).toDouble().pow(2) <= 19.0.pow(2)
-//        } !== null
-//    }
-
 
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
@@ -228,7 +223,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         val thisPlayerState = PlayerState(
                 userId = userId,
                 username = username,
-                positions = ArrayDeque(), //Position(0, 0),
+                positions = ArrayDeque(),
                 colour = colour,
                 mousePosition = Position(-1, -1),
                 angle = 0.0
@@ -246,10 +241,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                 gameChanges
                         .map {
                             synchronized(gameState.playerStates) {
-                                gameState.playerStates.joinToString(":") { player ->
-                                    "${player.username}, ${player.colour}, " +
-                                            player.positions.joinToString("_") { position -> "${position.x},${position.y}" }
-                                } + "/${gameState.recent?.x ?: -100}, ${gameState.recent?.y ?: -100}"
+                                objectMapper.writeValueAsString(gameState)
                             }
                         }
                         .map(session::textMessage)
@@ -263,7 +255,6 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                                 thisPlayerState.mousePosition.x = x.toInt()
                                 thisPlayerState.mousePosition.y = y.toInt()
                                 var currentCoordinate: Position
-//                                System.out.println(calculatePosition(currentCoordinate, thisPlayerState.positions.last))
                                 if (thisPlayerState.positions.size > 0) {
                                     currentCoordinate = calculatePosition(thisPlayerState)
                                 }

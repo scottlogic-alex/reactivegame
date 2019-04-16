@@ -4,9 +4,7 @@ import {
   OnDestroy,
   ElementRef,
   ViewChild,
-  HostListener,
-  Input,
-  NgModule
+  HostListener
 } from "@angular/core";
 import {
   interval,
@@ -59,7 +57,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
   }
 
   public changeColour() {
-    // console.log(this.color);
+    console.log(this.color);
     this.appService
       .updateColour(this.color)
       .subscribe(/*response => console.log(response)*/);
@@ -137,7 +135,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     playerStates: []
   });
 
-  private coordRegex: RegExp = /^([\w-]+), (#[A-Za-z\d]{6}), ([\d,_]+)$/;
+  // private coordRegex: RegExp = /^([\w- ]+), (#[A-Za-z\d]{6}), ([\d,_]+)$/;
 
   @HostListener("mousemove", ["$event"])
   onMousemove(event: MouseEvent) {
@@ -155,40 +153,21 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.mouseEvents$.next({ x: 0, y: 0 });
     this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
       msg => {
-        // console.log(msg);
-        const sections = msg.split("/");
-        if (sections.length === 2) {
-          const [playerStates, collisions] = sections;
-          // console.log(collisions);
-          const bang = this.stringtoCoords(collisions);
-          let users = playerStates.split(":");
-          let game: IGameState = {
-            playerStates: users
-              .map(
-                (user): RegExpExecArray | null => {
-                  // console.log(user);
-                  return this.coordRegex.exec(user);
-                }
-              )
-              .filter(match => match !== null)
-              .map(
-                (match): IPlayerState => {
-                  const [, username, colour, positionsString] = match;
-                  // this.color = colour;
-                  return {
-                    username,
-                    position: positionsString
-                      .split("_")
-                      .map(str => this.stringtoCoords(str)),
-                    colour
-                  };
-                }
-              )
-          };
-          this.gameStates$.next(game);
-          if (bang.x !== -100 && bang.y !== -100) {
-            this.collision$.next({ position: bang });
-          }
+        let gameState = JSON.parse(msg);
+        let game: IGameState = {
+          playerStates: gameState.playerStates.map(playerState => {
+            let ps: IPlayerState = {
+              username: playerState.username,
+              position: playerState.positions,
+              colour: playerState.colour
+            };
+            return ps;
+          })
+        };
+        let bang = gameState.recent;
+        this.gameStates$.next(game);
+        if (bang.x !== -100 && bang.y !== -100) {
+          this.collision$.next({ position: bang });
         }
       },
       err => {
@@ -213,15 +192,16 @@ export class BarrelComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe(([, gameState]: [never, IGameState]) => {
-        // console.log(gameState);
         this.context.clearRect(0, 0, this.width, this.height);
-        // this.drawBackground();
         gameState.playerStates.forEach(playerState => {
           let colour = playerState.colour;
           playerState.position.forEach((coords, idx) => {
             this.draw(colour, coords, idx / 4);
           });
-          this.drawEyes(playerState.position[playerState.position.length - 1]);
+          if (playerState.position.length)
+            this.drawEyes(
+              playerState.position[playerState.position.length - 1]
+            );
         });
         this.collisions.forEach(collision => {
           this.drawCollsion(collision.position);
