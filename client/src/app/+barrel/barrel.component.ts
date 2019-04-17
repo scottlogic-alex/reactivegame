@@ -42,6 +42,8 @@ export class BarrelComponent implements OnInit, OnDestroy {
   private readonly destroy$: Subject<void> = new Subject<void>();
   private readonly collision$: Subject<ICollision> = new Subject<ICollision>();
   private readonly collisions: Set<ICollision> = new Set<ICollision>();
+  private readonly apples$: Subject<IPosition> = new Subject<IPosition>();
+  private apple: IPosition;
   public width: number = 2000;
   public height: number = 1000;
   public color: string = "";
@@ -67,17 +69,10 @@ export class BarrelComponent implements OnInit, OnDestroy {
   }
 
   private draw(colour, position, transparency: number) {
-    const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
     this.context.globalAlpha = transparency;
     this.context.beginPath();
     this.context.lineWidth = 2;
-    this.context.arc(
-      position.x - left - window.scrollX,
-      position.y - top - window.scrollY,
-      10,
-      0,
-      2 * Math.PI
-    );
+    this.context.arc(position.x, position.y, 10, 0, 2 * Math.PI);
     this.context.strokeStyle = "black";
     this.context.stroke();
     this.context.fillStyle = colour;
@@ -85,39 +80,28 @@ export class BarrelComponent implements OnInit, OnDestroy {
   }
 
   private drawCollsion(position: IPosition) {
-    const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
     const imgSrc = "../../../assets/img/explosion.png";
     this.context.globalAlpha = 1;
     var img = new Image();
     img.src = imgSrc;
-    this.context.drawImage(
-      img,
-      position.x - left - window.scrollX - 50,
-      position.y - top - window.scrollY - 50,
-      100,
-      100
-    );
+    this.context.drawImage(img, position.x - 50, position.y - 50, 100, 100);
   }
 
   private drawEyes(position: IPosition) {
-    const { left, top } = this.myCanvas.nativeElement.getBoundingClientRect();
     const imgSrc = "../../../assets/img/googlyEyes.png";
     this.context.globalAlpha = 1;
     var img = new Image();
     img.src = imgSrc;
-    this.context.drawImage(
-      img,
-      position.x - left - window.scrollX - 20,
-      position.y - top - window.scrollY - 20,
-      40,
-      40
-    );
+    this.context.drawImage(img, position.x - 20, position.y - 20, 40, 40);
   }
 
-  // private stringtoCoords(str: string): IPosition {
-  //   const [x, y] = str.split(",");
-  //   return { x: +x, y: +y };
-  // }
+  private drawApple(position: IPosition) {
+    const imgSrc = "../../../assets/img/apple.png";
+    this.context.globalAlpha = 1;
+    var img = new Image();
+    img.src = imgSrc;
+    this.context.drawImage(img, position.x, position.y, 70, 70);
+  }
 
   private tooSlow(oldPosition: IPosition, newPosition: IPosition): boolean {
     return (
@@ -132,8 +116,6 @@ export class BarrelComponent implements OnInit, OnDestroy {
   public gameStates$: Subject<IGameState> = new BehaviorSubject<IGameState>({
     playerStates: []
   });
-
-  // private coordRegex: RegExp = /^([\w- ]+), (#[A-Za-z\d]{6}), ([\d,_]+)$/;
 
   @HostListener("mousemove", ["$event"])
   onMousemove(event: MouseEvent) {
@@ -152,11 +134,11 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
       msg => {
         let gameState = JSON.parse(msg);
-        // console.log(gameState.recent);
         let game: IGameState = {
           playerStates: gameState.playerStates
         };
         let bang = gameState.recent;
+        this.apples$.next(gameState.apple);
         this.gameStates$.next(game);
         if (bang.x !== -100 && bang.y !== -100) {
           this.collision$.next({ position: bang });
@@ -176,6 +158,10 @@ export class BarrelComponent implements OnInit, OnDestroy {
       setTimeout(() => {
         this.collisions.delete(collision);
       }, 100);
+    });
+
+    this.apples$.pipe().subscribe(apple => {
+      this.apple = apple;
     });
 
     interval(0, animationFrameScheduler)
@@ -198,6 +184,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
         this.collisions.forEach(collision => {
           this.drawCollsion(collision.position);
         });
+        if (this.apple) this.drawApple(this.apple);
       });
 
     this.mouseEvents$
@@ -212,15 +199,15 @@ export class BarrelComponent implements OnInit, OnDestroy {
           left,
           top
         } = this.myCanvas.nativeElement.getBoundingClientRect();
+        let x = Math.round(position.x - left);
+        let y = Math.round(position.y - top);
         if (
           position.x < left + this.width &&
           position.x > left &&
           position.y < top + this.height &&
           position.y > top
         ) {
-          this.clientWebSocket$.next(
-            `X: ${position.x}, Y: ${position.y + window.scrollY}`
-          );
+          this.clientWebSocket$.next(`X: ${x}, Y: ${y}`);
         }
       });
   }

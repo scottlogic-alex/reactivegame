@@ -41,10 +41,11 @@ data class PlayerState @ExperimentalUnsignedTypes constructor(
         var angle: Double
 )
 
- data class GameState (
-         val playerStates: MutableList<PlayerState>,
-         var recent: Position?
- )
+data class GameState (
+        val playerStates: MutableList<PlayerState>,
+        var recent: Position,
+        var apple: Position?
+)
 
 @Component
 class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
@@ -78,6 +79,13 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             }
             sink?.next(Unit)
         }
+
+        appleDropSubscription = appleDrop.subscribe{
+            val x: Int = Random.nextInt(100, 1900)
+            val y: Int = Random.nextInt(100, 900)
+            gameState.apple = Position(x = x, y = y)
+            sink?.next(Unit)
+        }
     }
 
     override fun destroy() {
@@ -86,7 +94,11 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         colourUpdateSubscription?.dispose()
     }
 
-    private val gameState: GameState = GameState(playerStates = mutableListOf(), recent = Position(x = -100, y = -100))
+    private val gameState: GameState = GameState(
+            playerStates = mutableListOf(),
+            recent = Position(x = -100, y = -100),
+            apple = null
+    )
     private val safeDots: Collisions = Collisions(collidees = ArrayList())
     private val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
     private var sink: FluxSink<Unit>? = null
@@ -95,9 +107,11 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         it.next(Unit)
     }.publish().autoConnect() //.share()
     private val physicsUpdate = Flux.interval(Duration.ofMillis(100L)).publish().autoConnect()
+    private val appleDrop = Flux.interval(Duration.ofMillis(5000L)).publish().autoConnect()
     private var colourUpdateSubscription: Disposable? = null
     private var nameUpdateSubscription: Disposable? = null
     private var disposableSubscription: Disposable? = null
+    private var appleDropSubscription: Disposable? = null
     @Autowired
     private lateinit var userRepository: UserRepository
     @Autowired
@@ -122,6 +136,10 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             }
         }
         return false
+    }
+
+    fun appleCollect(wormPosition: Position, applePosition: Position): Boolean {
+        return (wormPosition.x - (applePosition.x + 35)).toDouble().pow(2) + (wormPosition.y - (applePosition.y + 35)).toDouble().pow(2) < 40.0.pow(2)
     }
 
     fun waitOneSec(coordinates: List<Position>){
@@ -190,6 +208,9 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             }
             waitOneSec(collisions)
             gameState.recent = currentCoordinate
+        }
+        if (gameState.apple != null && appleCollect(currentCoordinate, gameState.apple!!)) {
+            gameState.apple = null
         }
         sink?.next(Unit)
     }
