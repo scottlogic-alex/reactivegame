@@ -48,6 +48,12 @@ export class BarrelComponent implements OnInit, OnDestroy {
   public height: number = 1000;
   public color: string = "";
   public username: string = "";
+  private winner: IPlayerState = {
+    username: null,
+    positions: [],
+    colour: null,
+    points: 0
+  };
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
     HTMLCanvasElement
@@ -101,6 +107,14 @@ export class BarrelComponent implements OnInit, OnDestroy {
     var img = new Image();
     img.src = imgSrc;
     this.context.drawImage(img, position.x, position.y, 70, 70);
+  }
+
+  private drawCrown(position: IPosition) {
+    const imgSrc = "../../../assets/img/crown.jpg";
+    this.context.globalAlpha = 1;
+    var img = new Image();
+    img.src = imgSrc;
+    this.context.drawImage(img, position.x - 20, position.y - 40, 40, 40);
   }
 
   private tooSlow(oldPosition: IPosition, newPosition: IPosition): boolean {
@@ -176,11 +190,28 @@ export class BarrelComponent implements OnInit, OnDestroy {
           playerState.positions.forEach((coords, idx) => {
             this.draw(colour, coords, idx / 4);
           });
-          if (playerState.positions.length)
+          if (playerState.positions.length) {
             this.drawEyes(
               playerState.positions[playerState.positions.length - 1]
             );
+          }
         });
+        if (gameState.playerStates.length > 0) {
+          this.winner = gameState.playerStates.reduce((currentBest, worm) => {
+            if (worm.points > currentBest.points) {
+              return worm;
+            }
+            return currentBest;
+          }, this.winner);
+
+          let winner = gameState.playerStates
+            .filter(worm => worm.positions.length === 10)
+            .sort((a, b) => b.points - a.points);
+          if (winner && winner.length) {
+            this.drawCrown(winner[0].positions[9]);
+          }
+        }
+
         this.collisions.forEach(collision => {
           this.drawCollsion(collision.position);
         });
@@ -231,6 +262,7 @@ interface IPlayerState {
   username: string;
   positions: Array<IPosition>;
   colour: string;
+  points: number;
 }
 
 interface IGameState {

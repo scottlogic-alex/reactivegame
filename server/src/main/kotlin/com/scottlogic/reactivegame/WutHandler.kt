@@ -38,7 +38,8 @@ data class PlayerState @ExperimentalUnsignedTypes constructor(
         @JsonIgnore
         val mousePosition: Position,
         @JsonIgnore
-        var angle: Double
+        var angle: Double,
+        var points: Int
 )
 
 data class GameState (
@@ -210,6 +211,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             gameState.recent = currentCoordinate
         }
         if (gameState.apple != null && appleCollect(currentCoordinate, gameState.apple!!)) {
+            thisPlayerState.points++
             gameState.apple = null
         }
         sink?.next(Unit)
@@ -250,7 +252,8 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                 positions = ArrayDeque(),
                 colour = colour,
                 mousePosition = Position(-1, -1),
-                angle = 0.0
+                angle = 0.0,
+                points = 0
         )
         synchronized(gameState.playerStates) {
             gameState.playerStates += thisPlayerState
