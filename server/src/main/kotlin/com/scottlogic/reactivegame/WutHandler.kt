@@ -1,5 +1,6 @@
 package com.scottlogic.reactivegame
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.InitializingBean
@@ -30,10 +31,13 @@ data class Position (
 
 data class PlayerState @ExperimentalUnsignedTypes constructor(
         var username: String,
+        @JsonIgnore
         val userId: String,
         val positions: ArrayDeque<Position>,
         var colour: String,
+        @JsonIgnore
         val mousePosition: Position,
+        @JsonIgnore
         var angle: Double
 )
 
@@ -41,7 +45,6 @@ data class PlayerState @ExperimentalUnsignedTypes constructor(
          val playerStates: MutableList<PlayerState>,
          var recent: Position?
  )
-
 
 @Component
 class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
@@ -176,11 +179,11 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         if (thisPlayerState.positions.size >= 10) thisPlayerState.positions.pop()
         thisPlayerState.positions.addLast(currentCoordinate)
         val obstacles = arrayListOf<Position>()
-        gameState.recent = Position(x = -100, y = -100)
-        synchronized(gameState.playerStates){
-            gameState.playerStates.forEach { user -> if (user.username !== thisPlayerState.username) obstacles.addAll(user.positions) }
+        synchronized(gameState) {
+            gameState.playerStates.forEach { user -> if (user.userId !== thisPlayerState.userId) obstacles.addAll(user.positions) }
+            gameState.recent = Position(x = -100, y = -100)
         }
-        val collisions = obstacles.filter { position -> collision(position, currentCoordinate) }
+            val collisions = obstacles.filter { position -> collision(position, currentCoordinate) }
         if (collisions.isNotEmpty()) {
             synchronized(safeDots.collidees) {
                 safeDots.collidees.addAll(collisions)
@@ -231,9 +234,6 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         synchronized(gameState.playerStates) {
             gameState.playerStates += thisPlayerState
         }
-
-//session.handshakeInfo.remoteAddress.address.hostName
-
 
         sink?.next(Unit)
 

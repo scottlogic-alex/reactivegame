@@ -22,14 +22,14 @@ export const ROOT_SELECTOR = "app";
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
       >
-        Index
+        Home
       </a>
       <a
         [routerLink]="['./barrel']"
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
       >
-        Barrel
+        Barrel o' worms
       </a>
     </nav>
     <main>

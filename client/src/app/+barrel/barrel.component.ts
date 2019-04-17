@@ -57,15 +57,13 @@ export class BarrelComponent implements OnInit, OnDestroy {
   }
 
   public changeColour() {
-    console.log(this.color);
-    this.appService
-      .updateColour(this.color)
-      .subscribe(/*response => console.log(response)*/);
+    this.appService.updateColour(this.color).subscribe();
+    this.color = "";
   }
 
   public setUsername() {
-    console.log(this.username);
     this.appService.updateUsername(this.username).subscribe();
+    this.username = "";
   }
 
   private draw(colour, position, transparency: number) {
@@ -74,7 +72,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.context.beginPath();
     this.context.lineWidth = 2;
     this.context.arc(
-      position.x - left,
+      position.x - left - window.scrollX,
       position.y - top - window.scrollY,
       10,
       0,
@@ -94,7 +92,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     img.src = imgSrc;
     this.context.drawImage(
       img,
-      position.x - left - 50,
+      position.x - left - window.scrollX - 50,
       position.y - top - window.scrollY - 50,
       100,
       100
@@ -109,17 +107,17 @@ export class BarrelComponent implements OnInit, OnDestroy {
     img.src = imgSrc;
     this.context.drawImage(
       img,
-      position.x - left - 20,
+      position.x - left - window.scrollX - 20,
       position.y - top - window.scrollY - 20,
       40,
       40
     );
   }
 
-  private stringtoCoords(str: string): IPosition {
-    const [x, y] = str.split(",");
-    return { x: +x, y: +y };
-  }
+  // private stringtoCoords(str: string): IPosition {
+  //   const [x, y] = str.split(",");
+  //   return { x: +x, y: +y };
+  // }
 
   private tooSlow(oldPosition: IPosition, newPosition: IPosition): boolean {
     return (
@@ -154,15 +152,9 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
       msg => {
         let gameState = JSON.parse(msg);
+        // console.log(gameState.recent);
         let game: IGameState = {
-          playerStates: gameState.playerStates.map(playerState => {
-            let ps: IPlayerState = {
-              username: playerState.username,
-              position: playerState.positions,
-              colour: playerState.colour
-            };
-            return ps;
-          })
+          playerStates: gameState.playerStates
         };
         let bang = gameState.recent;
         this.gameStates$.next(game);
@@ -195,12 +187,12 @@ export class BarrelComponent implements OnInit, OnDestroy {
         this.context.clearRect(0, 0, this.width, this.height);
         gameState.playerStates.forEach(playerState => {
           let colour = playerState.colour;
-          playerState.position.forEach((coords, idx) => {
+          playerState.positions.forEach((coords, idx) => {
             this.draw(colour, coords, idx / 4);
           });
-          if (playerState.position.length)
+          if (playerState.positions.length)
             this.drawEyes(
-              playerState.position[playerState.position.length - 1]
+              playerState.positions[playerState.positions.length - 1]
             );
         });
         this.collisions.forEach(collision => {
@@ -250,7 +242,7 @@ interface IPosition {
 
 interface IPlayerState {
   username: string;
-  position: Array<IPosition>;
+  positions: Array<IPosition>;
   colour: string;
 }
 
