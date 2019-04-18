@@ -226,7 +226,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             user = userRepository.findByHost(host)
         }
 
-//        println(user)
+        println(objectMapper.writeValueAsString(user))
 
         var userId: String
         var username: String

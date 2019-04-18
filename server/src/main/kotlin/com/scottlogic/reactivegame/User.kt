@@ -2,6 +2,7 @@ package com.scottlogic.reactivegame
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonManagedReference
+import com.sun.org.apache.xpath.internal.operations.Bool
 import org.hibernate.annotations.GenericGenerator
 import javax.persistence.*
 
@@ -25,8 +26,10 @@ data class User(
 )
 
 @Entity
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name="type")
 @Table(name = "items")
-data class Item(
+class Item {
         @Id
         @GeneratedValue(generator = "UUID")
         @GenericGenerator(
@@ -34,10 +37,17 @@ data class Item(
                 strategy = "org.hibernate.id.UUIDGenerator"
         )
         @Column(name = "id", updatable = false, nullable = false)
-        var id: String,
-        var name: String,
+        var id: String? = null
+        var consumable: Boolean? = null
         @ManyToOne
         @JoinColumn
         @JsonBackReference
-        var user: User
-)
+        var user: User? = null
+}
+
+@Entity
+@Table(name="hats")
+@DiscriminatorValue("HAT")
+class Hat: Item() {
+        var name: String? = null
+}
