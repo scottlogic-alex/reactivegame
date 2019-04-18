@@ -1,6 +1,15 @@
 <h1>Worm world</h1>
-<h3>
-  Choose your worm colour:
+<div class="grid-container">
+  <h3>
+    Set your username:
+  </h3>
+  <input [(ngModel)]="username" class="name" />
+  <button (click)="setUsername()" class="send" [disabled]="!username">
+    <i class="fas fa-check"></i>
+  </button>
+  <h3 class="colour-heading">
+    Choose your worm colour:
+  </h3>
   <button
     [(colorPicker)]="color"
     [style.background]="color"
@@ -11,14 +20,7 @@
     [cpDisableInput]="false"
     class="colour"
   ></button>
-</h3>
-<h3 class="grid-container">
-  Set your username:
-  <input [(ngModel)]="username" class="grid-item name" />
-  <button (click)="setUsername()" class="grid-item send" [disabled]="!username">
-    <i class="fas fa-check"></i>
-  </button>
-</h3>
+</div>
 <canvas
   #myCanvas
   width="{{ this.width }}"

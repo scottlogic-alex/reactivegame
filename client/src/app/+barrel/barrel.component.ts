@@ -110,11 +110,11 @@ export class BarrelComponent implements OnInit, OnDestroy {
   }
 
   private drawCrown(position: IPosition) {
-    const imgSrc = "../../../assets/img/crown.jpg";
+    const imgSrc = "../../../assets/img/crown2.png";
     this.context.globalAlpha = 1;
     var img = new Image();
     img.src = imgSrc;
-    this.context.drawImage(img, position.x - 20, position.y - 40, 40, 40);
+    this.context.drawImage(img, position.x - 20, position.y - 60, 40, 40);
   }
 
   private tooSlow(oldPosition: IPosition, newPosition: IPosition): boolean {

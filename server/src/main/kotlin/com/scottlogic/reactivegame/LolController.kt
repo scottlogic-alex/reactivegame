@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
+import javax.transaction.Transactional
 
 data class Lol(
         val lol: String
@@ -24,11 +25,13 @@ class LolController {
     @Autowired
     private lateinit var userNameUpdate: UserNameUpdate
 
+    @Transactional
     @GetMapping("/name/{name}")
     fun getUserByName(@PathVariable name: String): User? {
         return userRepository.findByName(name)
     }
 
+    @Transactional
     @GetMapping("/host")
     fun getUserByHost(request: ServerHttpRequest): User? {
         return userRepository.findByHost(request.remoteAddress!!.hostName)

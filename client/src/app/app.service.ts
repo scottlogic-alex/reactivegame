@@ -1,6 +1,7 @@
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Observable } from "rxjs";
+import { IUser } from "./user";
 
 export interface InternalStateType {
   [key: string]: any;
@@ -16,15 +17,15 @@ export class AppState {
     headers: new HttpHeaders({ "Content-Type": "application/json" })
   };
 
-  getUserByName(name: String): Observable<Object> {
+  getUserByName(name: String): Observable<IUser> {
     return this.http
-      .get(`http://ws00100:8080/lol/name/${name}`, this.httpOptions)
+      .get<IUser>(`http://ws00100:8080/lol/name/${name}`, this.httpOptions)
       .pipe();
   }
 
-  getUserByHost(): Observable<Object> {
+  getUserByHost(): Observable<IUser> {
     return this.http
-      .get(`http://ws00100:8080/lol/host`, this.httpOptions)
+      .get<IUser>(`http://ws00100:8080/lol/host`, this.httpOptions)
       .pipe();
   }
 

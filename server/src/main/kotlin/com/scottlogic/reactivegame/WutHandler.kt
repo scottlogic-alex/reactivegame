@@ -226,7 +226,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             user = userRepository.findByHost(host)
         }
 
-        println(user)
+//        println(user)
 
         var userId: String
         var username: String
@@ -241,8 +241,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             username = userId
             colour = getColour(Random.nextUBytes(3))
             if (host !== null) {
-
-                userRepository.save(User(userId, username, colour, host))
+                userRepository.save(User(userId, username, colour, host, emptyList()))
             }
         }
 

@@ -17,6 +17,8 @@
   margin-left: 20px;
   cursor: pointer;
   font-size: 20px;
+  height: 40px;
+  width: 40px;
 }
 
 .send[disabled] {
@@ -30,6 +32,8 @@
   border-color: black;
   font-size: x-large;
   padding-left: 20px;
+  border-radius: 100px;
+  height: 40px;
 }
 
 .name:focus {
@@ -37,12 +41,12 @@
 }
 
 .grid-container {
-  /* background-color: red; */
   display: inline-grid;
-  grid-template-columns: 200px 300px 60px;
+  grid-template-columns: 200px 400px 100px 500px 60px;
+  align-items: center;
 }
 
-.grid-item {
-  margin-left: 10px;
-  border-radius: 100px;
+.colour-heading {
+  text-align: right;
+  padding-right: 30px;
 }
