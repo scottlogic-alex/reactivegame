@@ -3,4 +3,11 @@ export interface IUser {
   id: string;
   colour: string;
   host: string;
+  items: Array<IItem>;
+}
+
+export interface IItem {
+  id: string;
+  consumable: boolean;
+  name: string;
 }

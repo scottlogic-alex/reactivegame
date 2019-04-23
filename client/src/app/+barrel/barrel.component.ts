@@ -24,6 +24,7 @@ import {
   WebSocketSubjectConfig
 } from "rxjs/websocket";
 import { AppState } from "../app.service";
+import { IAsset } from "../assetUrls";
 /**
  * We're loading this component asynchronously
  * We are using some magic with es6-promise-loader that will wrap the module with a Promise
@@ -53,6 +54,22 @@ export class BarrelComponent implements OnInit, OnDestroy {
     positions: [],
     colour: null,
     points: 0
+  };
+  private eyes: IAsset = {
+    url: "../../../assets/img/googlyEyes.png",
+    size: 40
+  };
+  private collision: IAsset = {
+    url: "../../../assets/img/explosion.png",
+    size: 100
+  };
+  private appleImg: IAsset = {
+    url: "../../../assets/img/apple.png",
+    size: 70
+  };
+  private crown: IAsset = {
+    url: "../../../assets/img/crown2.png",
+    size: 40
   };
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
@@ -85,36 +102,22 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.context.fill();
   }
 
-  private drawCollsion(position: IPosition) {
-    const imgSrc = "../../../assets/img/explosion.png";
+  private drawCustom(
+    position: IPosition,
+    image: IAsset,
+    xAdjust: number,
+    yAdjust: number
+  ) {
     this.context.globalAlpha = 1;
     var img = new Image();
-    img.src = imgSrc;
-    this.context.drawImage(img, position.x - 50, position.y - 50, 100, 100);
-  }
-
-  private drawEyes(position: IPosition) {
-    const imgSrc = "../../../assets/img/googlyEyes.png";
-    this.context.globalAlpha = 1;
-    var img = new Image();
-    img.src = imgSrc;
-    this.context.drawImage(img, position.x - 20, position.y - 20, 40, 40);
-  }
-
-  private drawApple(position: IPosition) {
-    const imgSrc = "../../../assets/img/apple.png";
-    this.context.globalAlpha = 1;
-    var img = new Image();
-    img.src = imgSrc;
-    this.context.drawImage(img, position.x, position.y, 70, 70);
-  }
-
-  private drawCrown(position: IPosition) {
-    const imgSrc = "../../../assets/img/crown2.png";
-    this.context.globalAlpha = 1;
-    var img = new Image();
-    img.src = imgSrc;
-    this.context.drawImage(img, position.x - 20, position.y - 60, 40, 40);
+    img.src = image.url;
+    this.context.drawImage(
+      img,
+      position.x - xAdjust,
+      position.y - yAdjust,
+      image.size,
+      image.size
+    );
   }
 
   private tooSlow(oldPosition: IPosition, newPosition: IPosition): boolean {
@@ -191,8 +194,11 @@ export class BarrelComponent implements OnInit, OnDestroy {
             this.draw(colour, coords, idx / 4);
           });
           if (playerState.positions.length) {
-            this.drawEyes(
-              playerState.positions[playerState.positions.length - 1]
+            this.drawCustom(
+              playerState.positions[playerState.positions.length - 1],
+              this.eyes,
+              20,
+              20
             );
           }
         });
@@ -208,14 +214,14 @@ export class BarrelComponent implements OnInit, OnDestroy {
             .filter(worm => worm.positions.length === 10)
             .sort((a, b) => b.points - a.points);
           if (winner && winner.length) {
-            this.drawCrown(winner[0].positions[9]);
+            this.drawCustom(winner[0].positions[9], this.crown, 20, 60);
           }
         }
 
         this.collisions.forEach(collision => {
-          this.drawCollsion(collision.position);
+          this.drawCustom(collision.position, this.collision, 50, 50);
         });
-        if (this.apple) this.drawApple(this.apple);
+        if (this.apple) this.drawCustom(this.apple, this.appleImg, 0, 0);
       });
 
     this.mouseEvents$
@@ -271,4 +277,9 @@ interface IGameState {
 
 interface ICollision {
   position: IPosition;
+}
+
+interface IAsset {
+  url: string;
+  size: number;
 }

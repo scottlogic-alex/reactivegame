@@ -16,7 +16,8 @@ export class HomeComponent implements OnInit {
     name: "",
     id: "",
     host: "",
-    colour: ""
+    colour: "",
+    items: []
   };
 
   public ngOnInit() {
