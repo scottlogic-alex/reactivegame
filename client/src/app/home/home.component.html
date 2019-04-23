@@ -3,4 +3,12 @@
 <h2>Your worm has colour: {{ user.colour }}</h2>
 <h2>You have {{ user.items.length }} items:</h2>
 <!-- <h2>{{ user.items | json }}</h2> -->
-<li *ngFor="let item of user.items">{{ item.name }}</li>
+<li *ngFor="let item of user.items">
+  {{ item.name }}
+  <img
+    src="{{ assets[item.name.toString()].url }}"
+    alt="{{ item.name.toString() }}"
+    height="{{ assets[item.name.toString()].height * 2 }}"
+    width="{{ assets[item.name.toString()].width * 2 }}"
+  />
+</li>

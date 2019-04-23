@@ -1,13 +1,14 @@
 export interface IAsset {
   url: string;
-  size: number;
+  height: number;
+  width: number;
   xAdjust: number;
   yAdjust: number;
 }
 
 export type AssetTypes =
-  | "Fedora"
-  | "Sombrero"
+  | "fedora"
+  | "sombrero"
   | "Apple"
   | "Eyes"
   | "Collision"
@@ -16,39 +17,45 @@ export type AssetTypes =
 export type AssetsStructure = { [key in AssetTypes]: IAsset };
 
 export const assets: AssetsStructure = {
-  Fedora: {
-    url: "/assets/img/fedora.png",
-    size: 40,
-    xAdjust: 20,
-    yAdjust: 60
+  fedora: {
+    url: "/assets/img/fedora2.png",
+    width: 70,
+    height: 40,
+    xAdjust: 33,
+    yAdjust: 45
   },
-  Sombrero: {
+  sombrero: {
     url: "/assets/img/sombrero.png",
-    size: 40,
-    xAdjust: 20,
+    width: 70,
+    height: 60,
+    xAdjust: 35,
     yAdjust: 60
   },
   Apple: {
     url: "/assets/img/apple.png",
-    size: 70,
+    width: 70,
+    height: 70,
     xAdjust: 0,
     yAdjust: 0
   },
   Eyes: {
     url: "/assets/img/googlyEyes.png",
-    size: 40,
+    width: 40,
+    height: 40,
     xAdjust: 20,
     yAdjust: 20
   },
   Collision: {
     url: "/assets/img/explosion.png",
-    size: 100,
+    width: 100,
+    height: 100,
     xAdjust: 50,
     yAdjust: 50
   },
   Crown: {
     url: "/assets/img/crown2.png",
-    size: 40,
+    width: 40,
+    height: 40,
     xAdjust: 20,
     yAdjust: 60
   }

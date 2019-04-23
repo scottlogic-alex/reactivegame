@@ -21,6 +21,8 @@ export class HomeComponent implements OnInit {
     items: []
   };
 
+  public assets = assets;
+
   public ngOnInit() {
     console.log("hello `Home` component");
     this.appService.getUserByHost().subscribe(user => {

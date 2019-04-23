@@ -94,8 +94,8 @@ export class BarrelComponent implements OnInit, OnDestroy {
       img,
       position.x - image.xAdjust,
       position.y - image.yAdjust,
-      image.size,
-      image.size
+      image.width,
+      image.height
     );
   }
 
