@@ -3,6 +3,7 @@ import { Component, OnInit } from "@angular/core";
 import { AppState } from "../app.service";
 import { Title } from "./title";
 import { IUser } from "../user";
+import { assets } from "../asset";
 
 @Component({
   selector: "home",

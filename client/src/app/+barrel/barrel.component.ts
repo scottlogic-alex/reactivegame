@@ -24,7 +24,7 @@ import {
   WebSocketSubjectConfig
 } from "rxjs/websocket";
 import { AppState } from "../app.service";
-import { IAsset } from "../assetUrls";
+import { IAsset, assets } from "../asset";
 /**
  * We're loading this component asynchronously
  * We are using some magic with es6-promise-loader that will wrap the module with a Promise
@@ -54,22 +54,6 @@ export class BarrelComponent implements OnInit, OnDestroy {
     positions: [],
     colour: null,
     points: 0
-  };
-  private eyes: IAsset = {
-    url: "../../../assets/img/googlyEyes.png",
-    size: 40
-  };
-  private collision: IAsset = {
-    url: "../../../assets/img/explosion.png",
-    size: 100
-  };
-  private appleImg: IAsset = {
-    url: "../../../assets/img/apple.png",
-    size: 70
-  };
-  private crown: IAsset = {
-    url: "../../../assets/img/crown2.png",
-    size: 40
   };
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
@@ -102,19 +86,14 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.context.fill();
   }
 
-  private drawCustom(
-    position: IPosition,
-    image: IAsset,
-    xAdjust: number,
-    yAdjust: number
-  ) {
+  private drawCustom(position: IPosition, image: IAsset) {
     this.context.globalAlpha = 1;
     var img = new Image();
     img.src = image.url;
     this.context.drawImage(
       img,
-      position.x - xAdjust,
-      position.y - yAdjust,
+      position.x - image.xAdjust,
+      position.y - image.yAdjust,
       image.size,
       image.size
     );
@@ -196,9 +175,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
           if (playerState.positions.length) {
             this.drawCustom(
               playerState.positions[playerState.positions.length - 1],
-              this.eyes,
-              20,
-              20
+              assets.Eyes
             );
           }
         });
@@ -214,14 +191,14 @@ export class BarrelComponent implements OnInit, OnDestroy {
             .filter(worm => worm.positions.length === 10)
             .sort((a, b) => b.points - a.points);
           if (winner && winner.length) {
-            this.drawCustom(winner[0].positions[9], this.crown, 20, 60);
+            this.drawCustom(winner[0].positions[9], assets.Crown);
           }
         }
 
         this.collisions.forEach(collision => {
-          this.drawCustom(collision.position, this.collision, 50, 50);
+          this.drawCustom(collision.position, assets.Collision);
         });
-        if (this.apple) this.drawCustom(this.apple, this.appleImg, 0, 0);
+        if (this.apple) this.drawCustom(this.apple, assets.Apple);
       });
 
     this.mouseEvents$
@@ -277,9 +254,4 @@ interface IGameState {
 
 interface ICollision {
   position: IPosition;
-}
-
-interface IAsset {
-  url: string;
-  size: number;
 }
