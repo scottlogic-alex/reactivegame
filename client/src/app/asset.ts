@@ -6,13 +6,22 @@ export interface IAsset {
   yAdjust: number;
 }
 
+export interface IHat {
+  id: string;
+  consumable: false;
+  inUse: boolean;
+  name: string;
+  type: "Hat";
+}
+
 export type AssetTypes =
   | "fedora"
   | "sombrero"
   | "Apple"
   | "Eyes"
   | "Collision"
-  | "Crown";
+  | "Crown"
+  | "clear";
 
 export type AssetsStructure = { [key in AssetTypes]: IAsset };
 
@@ -58,5 +67,12 @@ export const assets: AssetsStructure = {
     height: 40,
     xAdjust: 20,
     yAdjust: 60
+  },
+  clear: {
+    url: "/assets/img/clear.png",
+    width: 50,
+    height: 50,
+    xAdjust: 25,
+    yAdjust: 25
   }
 };

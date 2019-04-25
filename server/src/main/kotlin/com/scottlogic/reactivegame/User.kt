@@ -60,4 +60,5 @@ class Item {
 @DiscriminatorValue("HAT")
 class Hat: Item() {
         var name: String? = null
+        var inUse: Boolean? = null
 }

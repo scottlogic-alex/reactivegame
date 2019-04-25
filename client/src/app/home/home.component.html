@@ -1,14 +1,40 @@
 <h1>Worm Lobby</h1>
 <h2>Welcome {{ user.name }}</h2>
-<h2>Your worm has colour: {{ user.colour }}</h2>
+<h2>
+  Your worm has colour:
+  <canvas
+    #colour
+    width="30"
+    height="30"
+    style="border:1px solid"
+    class="colourCanvas"
+  ></canvas>
+</h2>
 <h2>You have {{ user.items.length }} items:</h2>
-<!-- <h2>{{ user.items | json }}</h2> -->
-<li *ngFor="let item of user.items">
-  {{ item.name }}
+<div
+  fxLayout="row"
+  fxLayoutGap="32px"
+  fxLayoutAlign="center center"
+  class="hats"
+>
+  <div *ngFor="let item of user.items">
+    <img
+      (click)="selectHat(item)"
+      class="hat"
+      src="{{ assets[item.name.toString()].url }}"
+      alt="{{ item.name.toString() }}"
+      height="{{ assets[item.name.toString()].height * 2 }}"
+      width="{{ assets[item.name.toString()].width * 2 }}"
+    />
+  </div>
   <img
-    src="{{ assets[item.name.toString()].url }}"
-    alt="{{ item.name.toString() }}"
-    height="{{ assets[item.name.toString()].height * 2 }}"
-    width="{{ assets[item.name.toString()].width * 2 }}"
+    class="clear"
+    (click)="clearHat()"
+    src="{{ assets.clear.url }}"
+    alt="clear"
+    height="{{ assets.clear.height }}"
+    width="{{ assets.clear.width }}"
   />
-</li>
+</div>
+<canvas #worm width="300" height="400" class="wormCanvas"></canvas>
+<button (click)="saveHat()" class="saveButton">Save selection</button>

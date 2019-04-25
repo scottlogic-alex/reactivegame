@@ -1,1 +1,45 @@
-/*styles for home content only*/
+h1,
+h2 {
+  text-align: center;
+}
+
+.hats {
+  width: 100%;
+}
+
+.hat {
+  cursor: pointer;
+}
+
+.colourCanvas {
+  display: inline;
+  align-self: center;
+}
+
+.wormCanvas {
+  padding-left: 0;
+  padding-right: 0;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+.saveButton {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  margin-top: 50px;
+  background-color: #00bcd4;
+  color: #004149;
+  border-style: outset;
+  border-color: #00bcd4;
+  border-radius: 100px;
+  cursor: pointer;
+  font-size: 30px;
+  font-weight: bolder;
+  height: 50px;
+}
+
+.clear {
+  margin-left: 20px;
+}

@@ -4,7 +4,7 @@ import { FormsModule } from "@angular/forms";
 import { HttpClientModule } from "@angular/common/http";
 import { RouterModule, PreloadAllModules } from "@angular/router";
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
-import { ColorPickerModule } from "ngx-color-picker";
+import { FlexLayoutModule } from "@angular/flex-layout";
 
 /*
  * Platform and Environment providers/directives/pipes
@@ -51,6 +51,7 @@ interface StoreType {
     BrowserModule,
     BrowserAnimationsModule,
     FormsModule,
+    FlexLayoutModule,
     HttpClientModule,
     RouterModule.forRoot(ROUTES, {
       useHash: Boolean(history.pushState) === false,
