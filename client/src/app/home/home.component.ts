@@ -4,6 +4,10 @@ import { AppState } from "../app.service";
 import { Title } from "./title";
 import { IUser } from "../user";
 import { assets, IAsset, IHat } from "../asset";
+import { HttpClient } from "@angular/common/http";
+import { Observable, forkJoin, Observer } from "rxjs";
+import { URL } from "url";
+import { map, switchMap } from "rxjs/operators";
 
 @Component({
   selector: "home",
@@ -12,7 +16,10 @@ import { assets, IAsset, IHat } from "../asset";
   templateUrl: "./home.component.html"
 })
 export class HomeComponent implements OnInit {
-  constructor(private appService: AppState) {}
+  constructor(
+    private appService: AppState,
+    private readonly httpClient: HttpClient
+  ) {}
   public user: IUser = {
     name: "",
     id: "",
@@ -42,7 +49,7 @@ export class HomeComponent implements OnInit {
     this.colourContext.fillRect(0, 0, 30, 30);
   }
 
-  private drawWorm(colour: string): void {
+  private drawWorm(colour: string, eyes: string): void {
     this.wormContext.globalAlpha = 1;
     this.wormContext.lineWidth = 3;
     this.wormContext.strokeStyle = "black";
@@ -64,20 +71,41 @@ export class HomeComponent implements OnInit {
       this.wormContext.stroke();
       this.wormContext.fill();
     }
-    this.drawCustom(assets.Eyes);
+    this.drawCustom(assets.Eyes, eyes);
   }
 
-  private drawCustom(image: IAsset) {
+  private drawCustom(image: IAsset, blob: string) {
     // console.log(image);
     this.wormContext.globalAlpha = 1;
     var img = new Image();
-    img.src = image.url;
+    img.src = blob;
     this.wormContext.drawImage(
       img,
       169 - 2 * image.xAdjust,
       205 - 2 * image.yAdjust,
       image.width * 2,
       image.height * 2
+    );
+  }
+
+  public getImage(imageUrl: string): Observable<string> {
+    return this.httpClient.get(imageUrl, { responseType: "blob" }).pipe(
+      switchMap(
+        (blob: Blob): Observable<string> =>
+          Observable.create((observer: Observer<string>) => {
+            const reader: FileReader = new FileReader();
+            reader.onloadend = () => {
+              console.warn(reader.result);
+              // const [, base64Data]: string[] = (reader.result as string).split(
+              //   ",",
+              //   2
+              // );
+              observer.next(reader.result as string);
+              observer.complete();
+            };
+            reader.readAsDataURL(blob);
+          })
+      )
     );
   }
 
@@ -88,8 +116,8 @@ export class HomeComponent implements OnInit {
   public selectHat(hat: IHat): void {
     this.selectedHat = hat;
     this.wormContext.clearRect(0, 0, 300, 300);
-    this.drawWorm(this.user.colour);
-    if (hat.name) this.drawCustom(assets[this.selectedHat.name]);
+    // this.drawWorm(this.user.colour, );
+    // if (hat.name) this.drawCustom(assets[this.selectedHat.name]);
   }
 
   public clearHat(): void {
@@ -107,11 +135,14 @@ export class HomeComponent implements OnInit {
     console.log("hello `Home` component");
     this.wormContext = this.worm.nativeElement.getContext("2d");
     this.colourContext = this.colour.nativeElement.getContext("2d");
-    this.appService.getUserByHost().subscribe(user => {
+    forkJoin(
+      this.appService.getUserByHost(),
+      this.getImage(this.assets.Eyes.url)
+    ).subscribe(([user, blob]: [IUser, string]) => {
       console.log(user);
       this.user = user;
       this.fillSquare(user.colour);
-      this.drawWorm(user.colour);
+      this.drawWorm(user.colour, blob);
     });
   }
 }
