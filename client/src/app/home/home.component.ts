@@ -90,23 +90,14 @@ export class HomeComponent implements OnInit {
   }
 
   public getImage(imageUrl: string): Observable<HTMLImageElement> {
-    return this.httpClient.get(imageUrl, { responseType: "blob" }).pipe(
-      switchMap(
-        (blob: Blob): Observable<HTMLImageElement> =>
-          Observable.create((observer: Observer<HTMLImageElement>) => {
-            const reader: FileReader = new FileReader();
-            var image = new Image();
-            reader.onloadend = () => {
-              image.onload = () => {
-                observer.next(image);
-                observer.complete();
-              };
-              image.src = reader.result as string;
-            };
-            reader.readAsDataURL(blob);
-          })
-      )
-    );
+    return Observable.create((observer: Observer<HTMLImageElement>) => {
+      var image = new Image();
+      image.onload = () => {
+        observer.next(image);
+        observer.complete();
+      };
+      image.src = imageUrl;
+    });
   }
 
   public saveHat(): void {
