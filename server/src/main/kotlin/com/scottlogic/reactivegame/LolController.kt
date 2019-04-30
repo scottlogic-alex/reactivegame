@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
+import java.util.*
 import javax.transaction.Transactional
 
 data class Lol(
@@ -18,6 +19,9 @@ class LolController {
 
     @Autowired
     private lateinit var userRepository: UserRepository
+
+    @Autowired
+    private lateinit var hatRepository: HatRepository
 
     @Autowired
     private lateinit var userColourUpdate: UserColourUpdate
@@ -56,4 +60,22 @@ class LolController {
         return userRepository.updateUserSetUsernameForHost(username, request.remoteAddress!!.hostName)
     }
 
+    @PutMapping("/host/hats")
+    fun setItemInUse(@RequestBody hatId: String, request: ServerHttpRequest) {
+        println(hatId)
+        val user = userRepository.findByHost(request.remoteAddress!!.hostName)
+        println(user)
+        user?.items?.filterIsInstance<Hat>()?.forEach { it.inUse = false }
+        if (hatId != "noHat") {
+            user?.items?.filterIsInstance<Hat>()?.find { it.id == hatId }?.inUse = true
+        }
+        userRepository.save(user!!)
+//        hatRepository.setUserHatsNotInUse(user!!.id)
+//        hatRepository.setInUseTrueById(hatId)
+    }
+
+    @GetMapping("/host/hostname")
+    fun getHostname(request: ServerHttpRequest): String? {
+        return request.remoteAddress?.hostName
+    }
 }

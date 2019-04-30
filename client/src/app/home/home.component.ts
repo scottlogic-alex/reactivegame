@@ -6,8 +6,6 @@ import { IUser } from "../user";
 import { assets, IAsset, IHat } from "../asset";
 import { HttpClient } from "@angular/common/http";
 import { Observable, forkJoin, Observer } from "rxjs";
-import { URL } from "url";
-import { map, switchMap } from "rxjs/operators";
 
 @Component({
   selector: "home",
@@ -76,10 +74,7 @@ export class HomeComponent implements OnInit {
   }
 
   private drawCustom(image: IAsset, imageSource: HTMLImageElement) {
-    // console.log(image);
     this.wormContext.globalAlpha = 1;
-    // var img = new Image();
-    // img.src = blob;
     this.wormContext.drawImage(
       imageSource,
       169 - 2 * image.xAdjust,
@@ -102,6 +97,7 @@ export class HomeComponent implements OnInit {
 
   public saveHat(): void {
     console.log(this.selectedHat);
+    this.appService.setInUseHat(this.selectedHat.id).subscribe();
   }
 
   public selectHat(hat: IHat): void {
@@ -117,7 +113,7 @@ export class HomeComponent implements OnInit {
 
   public clearHat(): void {
     let hat: IHat = {
-      id: "",
+      id: "noHat",
       consumable: false,
       inUse: false,
       name: "",
@@ -133,14 +129,31 @@ export class HomeComponent implements OnInit {
     forkJoin(
       this.appService.getUserByHost(),
       this.getImage(this.assets.Eyes.url)
-      // this.getImage(this.assets.fedora.)
-    ).subscribe(([user, eyesImage]: [IUser, HTMLImageElement]) => {
-      console.log(user);
-      this.user = user;
-      this.fillSquare(user.colour);
-      this.drawWorm(user.colour, eyesImage);
-      this.eyes = eyesImage;
-    });
+      // this.getImage(this.assets.fedora.url),
+      // this.getImage(this.assets.sombrero.url)
+    ).subscribe(
+      ([user, eyesImage /*fedoraImage, sombreroImage*/]: [
+        IUser,
+        HTMLImageElement
+        // HTMLImageElement,
+        // HTMLImageElement
+      ]) => {
+        console.log(user);
+        this.user = user;
+        this.fillSquare(user.colour);
+        this.drawWorm(user.colour, eyesImage);
+        this.eyes = eyesImage;
+        let hat = user.items.find(
+          item => item.type == "Hat" && item.inUse == true
+        );
+        if (hat) {
+          console.log("hat found");
+          let hatImage = new Image();
+          hatImage.src = assets[hat.name].url;
+          this.drawCustom(assets[hat.name], hatImage);
+        }
+      }
+    );
   }
 }
 

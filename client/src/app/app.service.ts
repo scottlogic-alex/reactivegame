@@ -2,6 +2,7 @@ import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Observable } from "rxjs";
 import { IUser } from "./user";
+import { IHat } from "./asset";
 
 export interface InternalStateType {
   [key: string]: any;
@@ -39,6 +40,12 @@ export class AppState {
   updateUsername(username: String): Observable<Object> {
     return this.http
       .put(`http://ws00100:8080/lol/host/name`, username, this.httpOptions)
+      .pipe();
+  }
+
+  setInUseHat(hatId: String): Observable<Object> {
+    return this.http
+      .put(`http://ws00100:8080/lol/host/hats/`, hatId, this.httpOptions)
       .pipe();
   }
 }

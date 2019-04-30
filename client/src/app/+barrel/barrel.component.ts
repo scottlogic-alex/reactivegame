@@ -16,7 +16,9 @@ import {
   takeUntil,
   distinctUntilChanged,
   withLatestFrom,
-  retry
+  retry,
+  throttleTime,
+  map
 } from "rxjs/operators";
 import {
   WebSocketSubject,
@@ -25,6 +27,7 @@ import {
 } from "rxjs/websocket";
 import { AppState } from "../app.service";
 import { IAsset, assets } from "../asset";
+import { IUser } from "app/user";
 /**
  * We're loading this component asynchronously
  * We are using some magic with es6-promise-loader that will wrap the module with a Promise
@@ -53,8 +56,10 @@ export class BarrelComponent implements OnInit, OnDestroy {
     username: null,
     positions: [],
     colour: null,
-    points: 0
+    points: 0,
+    hat: ""
   };
+  private hat: IAsset;
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
     HTMLCanvasElement
@@ -67,12 +72,10 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
   public changeColour() {
     this.appService.updateColour(this.color).subscribe();
-    this.color = "";
   }
 
   public setUsername() {
     this.appService.updateUsername(this.username).subscribe();
-    this.username = "";
   }
 
   private draw(colour, position, transparency: number) {
@@ -127,6 +130,18 @@ export class BarrelComponent implements OnInit, OnDestroy {
     };
     this.clientWebSocket$ = webSocket(config);
     this.mouseEvents$.next({ x: 0, y: 0 });
+
+    this.appService.getUserByHost().subscribe((user: IUser) => {
+      this.color = user.colour;
+      this.username = user.name;
+      let hat = user.items.find(
+        item => item.type == "Hat" && item.inUse == true
+      );
+      if (hat) {
+        this.hat = assets[hat.name];
+      }
+    });
+
     this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
       msg => {
         let gameState = JSON.parse(msg);
@@ -177,9 +192,15 @@ export class BarrelComponent implements OnInit, OnDestroy {
               playerState.positions[playerState.positions.length - 1],
               assets.Eyes
             );
+            if (playerState.hat) {
+              this.drawCustom(
+                playerState.positions[playerState.positions.length - 1],
+                assets[playerState.hat]
+              );
+            }
           }
         });
-        if (gameState.playerStates.length > 0) {
+        if (gameState.playerStates.length > 1) {
           this.winner = gameState.playerStates.reduce((currentBest, worm) => {
             if (worm.points > currentBest.points) {
               return worm;
@@ -206,6 +227,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
         distinctUntilChanged((a: IPosition, b: IPosition) =>
           this.tooSlow(a, b)
         ),
+        throttleTime(10),
         takeUntil(this.destroy$)
       )
       .subscribe(position => {
@@ -213,15 +235,21 @@ export class BarrelComponent implements OnInit, OnDestroy {
           left,
           top
         } = this.myCanvas.nativeElement.getBoundingClientRect();
+        let height = this.myCanvas.nativeElement.clientHeight;
+        let width = this.myCanvas.nativeElement.clientWidth;
         let x = Math.round(position.x - left);
         let y = Math.round(position.y - top);
         if (
-          position.x < left + this.width &&
+          position.x < left + width &&
           position.x > left &&
-          position.y < top + this.height &&
+          position.y < top + height &&
           position.y > top
         ) {
-          this.clientWebSocket$.next(`X: ${x}, Y: ${y}`);
+          this.clientWebSocket$.next(
+            `X: ${Math.round(x * (this.width / width))}, Y: ${Math.round(
+              y * (this.height / height)
+            )}`
+          );
         }
       });
   }
@@ -246,6 +274,7 @@ interface IPlayerState {
   positions: Array<IPosition>;
   colour: string;
   points: number;
+  hat: string;
 }
 
 interface IGameState {

@@ -39,7 +39,8 @@ data class PlayerState @ExperimentalUnsignedTypes constructor(
         val mousePosition: Position,
         @JsonIgnore
         var angle: Double,
-        var points: Int
+        var points: Int,
+        var hat: String?
 )
 
 data class GameState (
@@ -221,21 +222,27 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     override fun handle(session: WebSocketSession): Mono<Void> {
 
         var user: User? = null
-        var host: String? = session.handshakeInfo.remoteAddress?.address?.hostName
+        val host: String? = session.handshakeInfo.remoteAddress?.address?.hostName
+//        val canonicalHost: String? = session.handshakeInfo.remoteAddress?.address?.canonicalHostName
         if (host !== null) {
             user = userRepository.findByHost(host)
         }
 
+//        println(canonicalHost)
         println(objectMapper.writeValueAsString(user))
 
-        var userId: String
-        var username: String
-        var colour: String
+        val userId: String
+        val username: String
+        val colour: String
+        var hat: String? = ""
 
         if (user !== null) {
             userId = user.id
             username = user.name
             colour = user.colour
+            if (user.items.size > 0) {
+                hat = user.items.filterIsInstance<Hat>().find { hat -> hat.inUse == true }?.name
+            }
         } else {
             userId = UUID.randomUUID().toString()
             username = userId
@@ -252,7 +259,8 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                 colour = colour,
                 mousePosition = Position(-1, -1),
                 angle = 0.0,
-                points = 0
+                points = 0,
+                hat = hat
         )
         synchronized(gameState.playerStates) {
             gameState.playerStates += thisPlayerState

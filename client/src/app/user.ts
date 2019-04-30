@@ -10,4 +10,6 @@ export interface IItem {
   id: string;
   consumable: boolean;
   name: string;
+  type: string;
+  inUse: boolean;
 }
