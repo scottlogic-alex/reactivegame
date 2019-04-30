@@ -17,6 +17,13 @@ export interface IHat {
 export type AssetTypes =
   | "fedora"
   | "sombrero"
+  | "cowboy"
+  | "mortarboard"
+  | "ranger"
+  | "santa"
+  | "snapback"
+  | "spacehelmet"
+  | "sunhat"
   | "Apple"
   | "Eyes"
   | "Collision"
@@ -38,6 +45,55 @@ export const assets: AssetsStructure = {
     width: 70,
     height: 60,
     xAdjust: 35,
+    yAdjust: 60
+  },
+  cowboy: {
+    url: "/assets/img/cowboy.png",
+    width: 70,
+    height: 70,
+    xAdjust: 35,
+    yAdjust: 60
+  },
+  mortarboard: {
+    url: "/assets/img/mortarboard.png",
+    width: 70,
+    height: 50,
+    xAdjust: 35,
+    yAdjust: 45
+  },
+  ranger: {
+    url: "/assets/img/ranger.png",
+    width: 70,
+    height: 40,
+    xAdjust: 34,
+    yAdjust: 45
+  },
+  santa: {
+    url: "/assets/img/santa.png",
+    width: 70,
+    height: 70,
+    xAdjust: 45,
+    yAdjust: 65
+  },
+  snapback: {
+    url: "/assets/img/snapback.png",
+    width: 60,
+    height: 50,
+    xAdjust: 30,
+    yAdjust: 50
+  },
+  spacehelmet: {
+    url: "/assets/img/space_helmet.png",
+    width: 70,
+    height: 60,
+    xAdjust: 35,
+    yAdjust: 30
+  },
+  sunhat: {
+    url: "/assets/img/sunhat.png",
+    width: 90,
+    height: 70,
+    xAdjust: 43,
     yAdjust: 60
   },
   Apple: {
