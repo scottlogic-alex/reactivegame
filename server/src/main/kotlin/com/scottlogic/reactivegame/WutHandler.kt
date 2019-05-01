@@ -2,6 +2,7 @@ package com.scottlogic.reactivegame
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
+import javafx.geometry.Pos
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.annotation.Autowired
@@ -46,7 +47,13 @@ data class PlayerState @ExperimentalUnsignedTypes constructor(
 data class GameState (
         val playerStates: MutableList<PlayerState>,
         var recent: Position,
-        var apple: Position?
+        var apple: Position?,
+        var hat: HatDrop?
+)
+
+data class HatDrop (
+        val position: Position,
+        var type: String
 )
 
 @Component
@@ -88,6 +95,15 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             gameState.apple = Position(x = x, y = y)
             sink?.next(Unit)
         }
+
+        hatDropSubscription = hatDrop.subscribe{
+            val x: Int = Random.nextInt(100, 1900)
+            val y: Int = Random.nextInt(100, 900)
+            val type: String = hats[Random.nextInt(0, 9)]
+//            println(HatDrop(position = Position(x = x, y = y), type = type))
+            gameState.hat = HatDrop(position = Position(x = x, y = y), type = type)
+            sink?.next(Unit)
+        }
     }
 
     override fun destroy() {
@@ -99,7 +115,8 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     private val gameState: GameState = GameState(
             playerStates = mutableListOf(),
             recent = Position(x = -100, y = -100),
-            apple = null
+            apple = null,
+            hat = null
     )
     private val safeDots: Collisions = Collisions(collidees = ArrayList())
     private val coordRegex: Regex = Regex("X: (\\d+), Y: (\\d+)")
@@ -110,10 +127,13 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     }.publish().autoConnect() //.share()
     private val physicsUpdate = Flux.interval(Duration.ofMillis(100L)).publish().autoConnect()
     private val appleDrop = Flux.interval(Duration.ofMillis(5000L)).publish().autoConnect()
+    private val hatDrop = Flux.interval(Duration.ofSeconds(Random.nextLong(1, 10))).publish().autoConnect()
     private var colourUpdateSubscription: Disposable? = null
     private var nameUpdateSubscription: Disposable? = null
     private var disposableSubscription: Disposable? = null
     private var appleDropSubscription: Disposable? = null
+    private var hatDropSubscription: Disposable? = null
+    private val hats: Array<String> = arrayOf("fedora", "sombrero", "cowboy", "mortarboard", "ranger", "santa", "snapback", "spacehelmet", "sunhat")
     @Autowired
     private lateinit var userRepository: UserRepository
     @Autowired

@@ -47,7 +47,9 @@ export class BarrelComponent implements OnInit, OnDestroy {
   private readonly collision$: Subject<ICollision> = new Subject<ICollision>();
   private readonly collisions: Set<ICollision> = new Set<ICollision>();
   private readonly apples$: Subject<IPosition> = new Subject<IPosition>();
+  private readonly hats$: Subject<IHat> = new Subject<IHat>();
   private apple: IPosition;
+  private hat: IHat;
   public width: number = 2000;
   public height: number = 1000;
   public color: string = "";
@@ -59,7 +61,6 @@ export class BarrelComponent implements OnInit, OnDestroy {
     points: 0,
     hat: ""
   };
-  private hat: IAsset;
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
     HTMLCanvasElement
@@ -134,22 +135,19 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.appService.getUserByHost().subscribe((user: IUser) => {
       this.color = user.colour;
       this.username = user.name;
-      let hat = user.items.find(
-        item => item.type == "Hat" && item.inUse == true
-      );
-      if (hat) {
-        this.hat = assets[hat.name];
-      }
     });
 
     this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
       msg => {
         let gameState = JSON.parse(msg);
+        // console.log(gameState.hat);
         let game: IGameState = {
           playerStates: gameState.playerStates
         };
         let bang = gameState.recent;
         this.apples$.next(gameState.apple);
+        // console.log(gameState.hat);
+        this.hats$.next(gameState.hat);
         this.gameStates$.next(game);
         if (bang.x !== -100 && bang.y !== -100) {
           this.collision$.next({ position: bang });
@@ -173,6 +171,11 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
     this.apples$.pipe().subscribe(apple => {
       this.apple = apple;
+    });
+
+    this.hats$.pipe().subscribe(hat => {
+      this.hat = hat;
+      // console.log(this.hat);
     });
 
     interval(0, animationFrameScheduler)
@@ -220,6 +223,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
           this.drawCustom(collision.position, assets.Collision);
         });
         if (this.apple) this.drawCustom(this.apple, assets.Apple);
+        if (this.hat) this.drawCustom(this.hat.position, assets[this.hat.type]);
       });
 
     this.mouseEvents$
@@ -283,4 +287,9 @@ interface IGameState {
 
 interface ICollision {
   position: IPosition;
+}
+
+interface IHat {
+  position: IPosition;
+  type: string;
 }
