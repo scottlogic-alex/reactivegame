@@ -103,6 +103,12 @@ export class BarrelComponent implements OnInit, OnDestroy {
     );
   }
 
+  private writeName(position: IPosition, name: string) {
+    this.context.font = "25px Arial";
+    this.context.fillStyle = "white";
+    this.context.fillText(name, position.x, position.y - 70);
+  }
+
   private tooSlow(oldPosition: IPosition, newPosition: IPosition): boolean {
     return (
       (oldPosition.x - newPosition.x) ** 2 +
@@ -133,6 +139,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.mouseEvents$.next({ x: 0, y: 0 });
 
     this.appService.getUserByHost().subscribe((user: IUser) => {
+      console.log(user);
       this.color = user.colour;
       this.username = user.name;
     });
@@ -201,6 +208,10 @@ export class BarrelComponent implements OnInit, OnDestroy {
                 assets[playerState.hat]
               );
             }
+            this.writeName(
+              playerState.positions[playerState.positions.length - 1],
+              playerState.username
+            );
           }
         });
         if (gameState.playerStates.length > 1) {
@@ -223,7 +234,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
           this.drawCustom(collision.position, assets.Collision);
         });
         if (this.apple) this.drawCustom(this.apple, assets.Apple);
-        if (this.hat) this.drawCustom(this.hat.position, assets[this.hat.type]);
+        // if (this.hat) this.drawCustom(this.hat.position, assets[this.hat.type]);
       });
 
     this.mouseEvents$
