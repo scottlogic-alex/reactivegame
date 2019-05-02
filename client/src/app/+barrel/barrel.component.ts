@@ -10,7 +10,8 @@ import {
   interval,
   Subject,
   BehaviorSubject,
-  animationFrameScheduler
+  animationFrameScheduler,
+  Observable
 } from "rxjs";
 import {
   takeUntil,
@@ -18,7 +19,8 @@ import {
   withLatestFrom,
   retry,
   throttleTime,
-  map
+  tap,
+  switchMapTo
 } from "rxjs/operators";
 import {
   WebSocketSubject,
@@ -139,36 +141,39 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.clientWebSocket$ = webSocket(config);
     this.mouseEvents$.next({ x: 0, y: 0 });
 
-    this.appService.getUserByCookieId().subscribe((user: IUser) => {
-      console.log(user);
-      this.color = user.colour;
-      this.username = user.name;
-    });
-
-    this.clientWebSocket$.pipe(takeUntil(this.destroy$)).subscribe(
-      msg => {
-        let gameState = JSON.parse(msg);
-        // console.log(gameState.hat);
-        let game: IGameState = {
-          playerStates: gameState.playerStates
-        };
-        let bang = gameState.recent;
-        this.apples$.next(gameState.apple);
-        // console.log(gameState.hat);
-        this.hats$.next(gameState.hat);
-        this.gameStates$.next(game);
-        if (bang.x !== -100 && bang.y !== -100) {
-          this.collision$.next({ position: bang });
+    this.appService
+      .getUserByCookieId()
+      .pipe(
+        takeUntil(this.destroy$),
+        tap((user: IUser) => {
+          console.log(user);
+          this.color = user.colour;
+          this.username = user.name;
+        }),
+        switchMapTo(this.clientWebSocket$)
+      )
+      .subscribe(
+        msg => {
+          let gameState = JSON.parse(msg);
+          let game: IGameState = {
+            playerStates: gameState.playerStates
+          };
+          let bang = gameState.recent;
+          this.apples$.next(gameState.apple);
+          this.hats$.next(gameState.hat);
+          this.gameStates$.next(game);
+          if (bang.x !== -100 && bang.y !== -100) {
+            this.collision$.next({ position: bang });
+          }
+        },
+        err => {
+          console.error(err);
+        },
+        () => {
+          console.warn("closing connection");
+          retry();
         }
-      },
-      err => {
-        console.error(err);
-      },
-      () => {
-        console.warn("closing connection");
-        retry();
-      }
-    );
+      );
 
     this.collision$.pipe().subscribe(collision => {
       this.collisions.add(collision);
