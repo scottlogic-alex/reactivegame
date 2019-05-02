@@ -1,16 +1,13 @@
 package com.scottlogic.reactivegame
 
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.web.servlet.server.Session
 import org.springframework.http.ResponseCookie
 import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
-import java.time.Duration
 import java.util.*
 import javax.transaction.Transactional
-import javax.xml.ws.Response
 import kotlin.random.Random
 import kotlin.random.nextUBytes
 
@@ -36,17 +33,17 @@ class LolController {
     @Autowired
     private lateinit var userNameUpdate: UserNameUpdate
 
-    @Transactional
-    @GetMapping("/name/{name}")
-    fun getUserByName(@PathVariable name: String): User? {
-        return userRepository.findByName(name)
-    }
-
-    @Transactional
-    @GetMapping("/host")
-    fun getUserByHost(request: ServerHttpRequest): User? {
-        return userRepository.findByHost(request.remoteAddress!!.hostName)
-    }
+//    @Transactional
+//    @GetMapping("/name/{name}")
+//    fun getUserByName(@PathVariable name: String): User? {
+//        return userRepository.findByName(name)
+//    }
+//
+//    @Transactional
+//    @GetMapping("/host")
+//    fun getUserByHost(request: ServerHttpRequest): User? {
+//        return userRepository.findByHost(request.remoteAddress!!.hostName)
+//    }
 
     @ExperimentalUnsignedTypes
     private fun getColour(channels: UByteArray): String {
@@ -60,7 +57,6 @@ class LolController {
         println(id)
         if (id == "") {
             val user = User(
-//                    id = UUID.randomUUID().toString(),
                     id = "",
                     name = "new user",
                     colour = getColour(Random.nextUBytes(3)),
@@ -74,39 +70,26 @@ class LolController {
         return userRepository.findById(id)
     }
 
-
-
-    @PostMapping("/")
-    fun addUser(user: User): User {
-        return userRepository.save(user)
+    @PutMapping("/id/colour")
+    fun updateColourById (@RequestBody colour: String, @CookieValue(value = "id", defaultValue = "") id: String) {
+        userColourUpdate.colourSink?.next(ColourUpdate(userId = id, colour = colour))
+        return userRepository.updateUserSetColourById(colour = colour, id = id)
     }
 
-    @PutMapping("/host/colour")
-    fun updateColourByHost(@RequestBody colour: String, request: ServerHttpRequest) {
-        val user = userRepository.findByHost(request.remoteAddress!!.hostName)
-        userColourUpdate.colourSink?.next(ColourUpdate(colour = colour,  userId = user!!.id))
-        return userRepository.updateUserSetColourForHost(colour, request.remoteAddress!!.hostName)
+    @PutMapping("/id/name")
+    fun updateUsernameById(@RequestBody username: String, @CookieValue(value = "id", defaultValue = "") id: String) {
+        userNameUpdate.nameSink?.next(NameUpdate(userName = username.trim(), userId = id))
+        return userRepository.updateUserSetUsernameById(username = username, id = id)
     }
 
-    @PutMapping("/host/name")
-    fun updateUsernameByHost(@RequestBody username: String, request: ServerHttpRequest) {
-        if (username.length <= 30) {
-            val user = userRepository.findByHost(request.remoteAddress!!.hostName)
-            userNameUpdate.nameSink?.next(NameUpdate(userName = username.trim(), userId = user!!.id))
-            return userRepository.updateUserSetUsernameForHost(username, request.remoteAddress!!.hostName)
-        }
-    }
-
-    @PutMapping("/host/hats")
-    fun setItemInUse(@RequestBody hatId: String, request: ServerHttpRequest) {
-        println(hatId)
-        val user = userRepository.findByHost(request.remoteAddress!!.hostName)
-        println(user)
-        user?.items?.filterIsInstance<Hat>()?.forEach { it.inUse = false }
+    @PutMapping("/id/hats")
+    fun setItemInUse(@RequestBody hatId: String,  @CookieValue(value = "id", defaultValue = "") id: String) {
+        val user = userRepository.findById(id).get()
+        user.items.filterIsInstance<Hat>().forEach { it.inUse = false }
         if (hatId != "noHat") {
-            user?.items?.filterIsInstance<Hat>()?.find { it.id == hatId }?.inUse = true
+            user.items.filterIsInstance<Hat>().find { it.id == hatId }?.inUse = true
         }
-        userRepository.save(user!!)
+        userRepository.save(user)
 //        hatRepository.setUserHatsNotInUse(user!!.id)
 //        hatRepository.setInUseTrueById(hatId)
     }

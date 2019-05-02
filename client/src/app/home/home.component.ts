@@ -97,7 +97,7 @@ export class HomeComponent implements OnInit {
 
   public saveHat(): void {
     console.log(this.selectedHat);
-    this.appService.setInUseHat(this.selectedHat.id).subscribe();
+    this.appService.setInUseHatByCookieId(this.selectedHat.id).subscribe();
   }
 
   public selectHat(hat: IHat): void {

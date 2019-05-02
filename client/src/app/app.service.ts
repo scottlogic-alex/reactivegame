@@ -25,11 +25,11 @@ export class AppState {
   //     .pipe();
   // }
 
-  getUserByHost(): Observable<IUser> {
-    return this.http
-      .get<IUser>(`http://ws00100:8080/lol/host`, this.httpOptions)
-      .pipe();
-  }
+  // getUserByHost(): Observable<IUser> {
+  //   return this.http
+  //     .get<IUser>(`http://ws00100:8080/lol/host`, this.httpOptions)
+  //     .pipe();
+  // }
 
   getUserByCookieId(): Observable<IUser> {
     return this.http
@@ -37,22 +37,22 @@ export class AppState {
       .pipe();
   }
 
-  updateColour(colour: String): Observable<Object> {
+  updateColourByCookieId(colour: String): Observable<Object> {
     console.log("sent");
     return this.http
-      .put(`http://ws00100:8080/lol/host/colour`, colour, this.httpOptions)
+      .put(`http://ws00100:8080/lol/id/colour`, colour, this.httpOptions)
       .pipe();
   }
 
-  updateUsername(username: String): Observable<Object> {
+  updateUsernameByCookieId(username: String): Observable<Object> {
     return this.http
-      .put(`http://ws00100:8080/lol/host/name`, username, this.httpOptions)
+      .put(`http://ws00100:8080/lol/id/name`, username, this.httpOptions)
       .pipe();
   }
 
-  setInUseHat(hatId: String): Observable<Object> {
+  setInUseHatByCookieId(hatId: String): Observable<Object> {
     return this.http
-      .put(`http://ws00100:8080/lol/host/hats/`, hatId, this.httpOptions)
+      .put(`http://ws00100:8080/lol/id/hats/`, hatId, this.httpOptions)
       .pipe();
   }
 }

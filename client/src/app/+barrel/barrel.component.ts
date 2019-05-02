@@ -74,11 +74,11 @@ export class BarrelComponent implements OnInit, OnDestroy {
   }
 
   public changeColour() {
-    this.appService.updateColour(this.color).subscribe();
+    this.appService.updateColourByCookieId(this.color).subscribe();
   }
 
   public setUsername() {
-    this.appService.updateUsername(this.username).subscribe();
+    this.appService.updateUsernameByCookieId(this.username).subscribe();
   }
 
   private draw(colour, position, transparency: number) {
