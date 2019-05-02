@@ -144,13 +144,13 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.appService
       .getUserByCookieId()
       .pipe(
-        takeUntil(this.destroy$),
         tap((user: IUser) => {
           console.log(user);
           this.color = user.colour;
           this.username = user.name;
         }),
-        switchMapTo(this.clientWebSocket$)
+        switchMapTo(this.clientWebSocket$),
+        takeUntil(this.destroy$)
       )
       .subscribe(
         msg => {
