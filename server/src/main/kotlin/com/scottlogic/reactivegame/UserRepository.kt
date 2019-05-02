@@ -1,12 +1,12 @@
 package com.scottlogic.reactivegame
 
-import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.CrudRepository
 
-interface UserRepository: JpaRepository<User, String> {
+interface UserRepository: CrudRepository<User, String> {
     fun findByName(name: String): User?
     fun findByHost(host: String): User?
-    fun save(user: User)
+//    fun save(user: User)
     @Query(value = "UPDATE firsttest.users SET colour = :colour WHERE host = :host", nativeQuery = true)
     fun updateUserSetColourForHost (colour: String, host: String)
     @Query(value = "UPDATE firsttest.users SET name = :username WHERE host = :host", nativeQuery = true)

@@ -2,7 +2,7 @@ import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Observable } from "rxjs";
 import { IUser } from "./user";
-import { IHat } from "./asset";
+import { CookieService } from "angular2-cookie";
 
 export interface InternalStateType {
   [key: string]: any;
@@ -12,21 +12,28 @@ export interface InternalStateType {
 export class AppState {
   public _state: InternalStateType = {};
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private cookieService: CookieService) {}
 
   httpOptions = {
-    headers: new HttpHeaders({ "Content-Type": "application/json" })
+    headers: new HttpHeaders({ "Content-Type": "application/json" }),
+    withCredentials: true
   };
 
-  getUserByName(name: String): Observable<IUser> {
-    return this.http
-      .get<IUser>(`http://ws00100:8080/lol/name/${name}`, this.httpOptions)
-      .pipe();
-  }
+  // getUserByName(name: String): Observable<IUser> {
+  //   return this.http
+  //     .get<IUser>(`http://ws00100:8080/lol/name/${name}`, this.httpOptions)
+  //     .pipe();
+  // }
 
   getUserByHost(): Observable<IUser> {
     return this.http
       .get<IUser>(`http://ws00100:8080/lol/host`, this.httpOptions)
+      .pipe();
+  }
+
+  getUserByCookieId(): Observable<IUser> {
+    return this.http
+      .get<IUser>(`http://ws00100:8080/lol/id`, this.httpOptions)
       .pipe();
   }
 

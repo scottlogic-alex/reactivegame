@@ -2,7 +2,6 @@ package com.scottlogic.reactivegame
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
-import javafx.geometry.Pos
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.annotation.Autowired
@@ -19,7 +18,6 @@ import kotlin.collections.ArrayList
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
 import kotlin.random.Random
-import kotlin.random.nextUBytes
 
 data class Collisions (
         var collidees: ArrayList<Position>
@@ -54,6 +52,11 @@ data class GameState (
 data class HatDrop (
         val position: Position,
         var type: String
+)
+
+data class Cookie (
+        val key: String,
+        val value: String
 )
 
 @Component
@@ -100,7 +103,6 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             val x: Int = Random.nextInt(100, 1900)
             val y: Int = Random.nextInt(100, 900)
             val type: String = hats[Random.nextInt(0, 9)]
-//            println(HatDrop(position = Position(x = x, y = y), type = type))
             gameState.hat = HatDrop(position = Position(x = x, y = y), type = type)
             sink?.next(Unit)
         }
@@ -142,12 +144,6 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     private lateinit var userColourUpdate: UserColourUpdate
     @Autowired
     private lateinit var objectMapper: ObjectMapper
-
-    @ExperimentalUnsignedTypes
-    fun getColour(channels: UByteArray): String {
-        return "#"+"%02X".repeat(3)
-                .format(*channels.map(UByte::toInt).toTypedArray())
-    }
 
     fun collision(existing: Position, toDraw: Position): Boolean {
         synchronized(safeDots.collidees) {
@@ -241,42 +237,32 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
 
-        var user: User? = null
-        val host: String? = session.handshakeInfo.remoteAddress?.address?.hostName
-//        val canonicalHost: String? = session.handshakeInfo.remoteAddress?.address?.canonicalHostName
-        if (host !== null) {
-            user = userRepository.findByHost(host)
+        var user: Optional<User> = Optional.of( User(id = "", name = "", colour = "", host = "", items = listOf()))
+        val cookie = session.handshakeInfo.headers.getValue("Cookie").map { cookie ->
+            val arr = cookie.split("=")
+            Cookie(key = arr[0], value = arr[1])
+        }.find { cookiePair -> cookiePair.key == "id" }
+
+        if (cookie != null) {
+            user = userRepository.findById(cookie.value)
         }
 
-//        println(canonicalHost)
         println(objectMapper.writeValueAsString(user))
 
-        val userId: String
-        val username: String
-        val colour: String
+        val thisPlayerState: PlayerState
         var hat: String? = ""
 
-        if (user !== null) {
-            userId = user.id
-            username = user.name
-            colour = user.colour
-            if (user.items.size > 0) {
-                hat = user.items.filterIsInstance<Hat>().find { hat -> hat.inUse == true }?.name
+        if (user.isPresent) {
+            val existingUser = user.get()
+            if (existingUser.items.isNotEmpty()) {
+                hat = existingUser.items.filterIsInstance<Hat>().find { hat -> hat.inUse == true }?.name
             }
-        } else {
-            userId = UUID.randomUUID().toString()
-            username = userId
-            colour = getColour(Random.nextUBytes(3))
-            if (host !== null) {
-                userRepository.save(User(userId, username, colour, host, emptyList()))
-            }
-        }
 
-        val thisPlayerState = PlayerState(
-                userId = userId,
-                username = username,
+        thisPlayerState = PlayerState(
+                userId = existingUser.id,
+                username = existingUser.name,
                 positions = ArrayDeque(),
-                colour = colour,
+                colour = existingUser.colour,
                 mousePosition = Position(-1, -1),
                 angle = 0.0,
                 points = 0,
@@ -284,6 +270,9 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         )
         synchronized(gameState.playerStates) {
             gameState.playerStates += thisPlayerState
+        }
+        } else {
+            throw IllegalArgumentException("no user found")
         }
 
         sink?.next(Unit)
@@ -329,5 +318,4 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             }
         }
     }
-
 }

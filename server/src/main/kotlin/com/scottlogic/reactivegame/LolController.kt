@@ -1,11 +1,18 @@
 package com.scottlogic.reactivegame
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.web.servlet.server.Session
+import org.springframework.http.ResponseCookie
 import org.springframework.http.server.reactive.ServerHttpRequest
+import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
+import java.time.Duration
 import java.util.*
 import javax.transaction.Transactional
+import javax.xml.ws.Response
+import kotlin.random.Random
+import kotlin.random.nextUBytes
 
 data class Lol(
         val lol: String
@@ -41,8 +48,36 @@ class LolController {
         return userRepository.findByHost(request.remoteAddress!!.hostName)
     }
 
+    @ExperimentalUnsignedTypes
+    private fun getColour(channels: UByteArray): String {
+        return "#"+"%02X".repeat(3)
+                .format(*channels.map(UByte::toInt).toTypedArray())
+    }
+
+    @GetMapping("/id")
+    @ExperimentalUnsignedTypes
+    fun getUserByIdUsingCookie(@CookieValue(value = "id", defaultValue = "") id: String, response: ServerHttpResponse): Optional<User> {
+        println(id)
+        if (id == "") {
+            val user = User(
+//                    id = UUID.randomUUID().toString(),
+                    id = "",
+                    name = "new user",
+                    colour = getColour(Random.nextUBytes(3)),
+                    items = listOf(),
+                    host = UUID.randomUUID().toString()
+            )
+            val savedUser = userRepository.save(user)
+            response.addCookie(ResponseCookie.from("id", savedUser.id).path("/").build())
+            return Optional.of(savedUser)
+        }
+        return userRepository.findById(id)
+    }
+
+
+
     @PostMapping("/")
-    fun addUser(user: User) {
+    fun addUser(user: User): User {
         return userRepository.save(user)
     }
 
@@ -55,9 +90,11 @@ class LolController {
 
     @PutMapping("/host/name")
     fun updateUsernameByHost(@RequestBody username: String, request: ServerHttpRequest) {
-        val user = userRepository.findByHost(request.remoteAddress!!.hostName)
-        userNameUpdate.nameSink?.next(NameUpdate(userName = username, userId = user!!.id))
-        return userRepository.updateUserSetUsernameForHost(username, request.remoteAddress!!.hostName)
+        if (username.length <= 30) {
+            val user = userRepository.findByHost(request.remoteAddress!!.hostName)
+            userNameUpdate.nameSink?.next(NameUpdate(userName = username.trim(), userId = user!!.id))
+            return userRepository.updateUserSetUsernameForHost(username, request.remoteAddress!!.hostName)
+        }
     }
 
     @PutMapping("/host/hats")

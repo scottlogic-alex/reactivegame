@@ -24,6 +24,7 @@ export type AssetTypes =
   | "snapback"
   | "spacehelmet"
   | "sunhat"
+  | "viking"
   | "Apple"
   | "Eyes"
   | "Collision"
@@ -95,6 +96,13 @@ export const assets: AssetsStructure = {
     height: 70,
     xAdjust: 43,
     yAdjust: 60
+  },
+  viking: {
+    url: "/assets/img/viking.png",
+    width: 70,
+    height: 60,
+    xAdjust: 40,
+    yAdjust: 65
   },
   Apple: {
     url: "/assets/img/apple.png",

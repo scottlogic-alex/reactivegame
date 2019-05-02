@@ -3,7 +3,7 @@
   <h3>
     Set your username:
   </h3>
-  <input [(ngModel)]="username" class="name" />
+  <input [(ngModel)]="username" class="name" maxLength="30" />
   <button (click)="setUsername()" class="send" [disabled]="!username">
     <i class="fas fa-check"></i>
   </button>

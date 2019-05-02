@@ -131,6 +131,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
   private mouseEvents$: Subject<IPosition> = new Subject<IPosition>();
 
   public ngOnInit() {
+    console.log("hello");
     const config: WebSocketSubjectConfig<string> = {
       url: "ws://ws00100:8080/wut",
       deserializer: (e: MessageEvent) => e.data
@@ -138,7 +139,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.clientWebSocket$ = webSocket(config);
     this.mouseEvents$.next({ x: 0, y: 0 });
 
-    this.appService.getUserByHost().subscribe((user: IUser) => {
+    this.appService.getUserByCookieId().subscribe((user: IUser) => {
       console.log(user);
       this.color = user.colour;
       this.username = user.name;
@@ -210,7 +211,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
             }
             this.writeName(
               playerState.positions[playerState.positions.length - 1],
-              playerState.username
+              `${playerState.username}: ${playerState.points}`
             );
           }
         });

@@ -18,4 +18,6 @@ interface HatRepository: JpaRepository<Hat, String> {
     @Query(value = //language=JPAQL
     "select u from User u where u.id = :id")
     fun selectUser(id: String): User?
+
+
 }

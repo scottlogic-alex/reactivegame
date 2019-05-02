@@ -5,6 +5,7 @@ import { HttpClientModule } from "@angular/common/http";
 import { RouterModule, PreloadAllModules } from "@angular/router";
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { FlexLayoutModule } from "@angular/flex-layout";
+import { CookieService } from "angular2-cookie/services/cookies.service";
 
 /*
  * Platform and Environment providers/directives/pipes
@@ -53,6 +54,7 @@ interface StoreType {
     FormsModule,
     FlexLayoutModule,
     HttpClientModule,
+    // CookieModule.forRoot(),
     RouterModule.forRoot(ROUTES, {
       useHash: Boolean(history.pushState) === false,
       preloadingStrategy: PreloadAllModules
@@ -68,6 +70,6 @@ interface StoreType {
   /**
    * Expose our Services and Providers into Angular's dependency injection.
    */
-  providers: [environment.ENV_PROVIDERS, APP_PROVIDERS]
+  providers: [environment.ENV_PROVIDERS, APP_PROVIDERS, CookieService]
 })
 export class AppModule {}

@@ -4,8 +4,8 @@ import { AppState } from "../app.service";
 import { Title } from "./title";
 import { IUser } from "../user";
 import { assets, IAsset, IHat } from "../asset";
-import { HttpClient } from "@angular/common/http";
 import { Observable, forkJoin, Observer } from "rxjs";
+import { CookieService } from "angular2-cookie/core";
 
 @Component({
   selector: "home",
@@ -16,7 +16,7 @@ import { Observable, forkJoin, Observer } from "rxjs";
 export class HomeComponent implements OnInit {
   constructor(
     private appService: AppState,
-    private readonly httpClient: HttpClient
+    private cookieService: CookieService
   ) {}
   public user: IUser = {
     name: "",
@@ -122,12 +122,24 @@ export class HomeComponent implements OnInit {
     this.selectHat(hat);
   }
 
+  public getCookie(key: string) {
+    return this.cookieService.get(key);
+  }
+
   public ngOnInit() {
     console.log("hello `Home` component");
+
+    // this.cookieService.put("test", "testing");
+    // console.log("set test cookie as test");
+    // console.log(this.getCookie("test"));
+    // this.appService.getUserByCookieId().subscribe(user => {
+    //   console.log(user);
+    // });
+
     this.wormContext = this.worm.nativeElement.getContext("2d");
     this.colourContext = this.colour.nativeElement.getContext("2d");
     forkJoin(
-      this.appService.getUserByHost(),
+      this.appService.getUserByCookieId(),
       this.getImage(this.assets.Eyes.url)
       // this.getImage(this.assets.fedora.url),
       // this.getImage(this.assets.sombrero.url)

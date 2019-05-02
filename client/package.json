@@ -97,6 +97,7 @@
     "@angular/platform-browser-dynamic": "^7.2.12",
     "@angular/platform-server": "^7.2.12",
     "@angular/router": "^7.2.12",
+    "angular2-cookie": "^1.2.6",
     "core-js": "^2.5.7",
     "http-server": "^0.11.1",
     "ie-shim": "^0.1.0",
