@@ -1,6 +1,6 @@
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
-import { Observable } from "rxjs";
+import { Observable, Observer } from "rxjs";
 import { IUser } from "./user";
 import { CookieService } from "angular2-cookie";
 
@@ -19,17 +19,16 @@ export class AppState {
     withCredentials: true
   };
 
-  // getUserByName(name: String): Observable<IUser> {
-  //   return this.http
-  //     .get<IUser>(`http://ws00100:8080/lol/name/${name}`, this.httpOptions)
-  //     .pipe();
-  // }
-
-  // getUserByHost(): Observable<IUser> {
-  //   return this.http
-  //     .get<IUser>(`http://ws00100:8080/lol/host`, this.httpOptions)
-  //     .pipe();
-  // }
+  getImage(imageUrl: string): Observable<HTMLImageElement> {
+    return Observable.create((observer: Observer<HTMLImageElement>) => {
+      var image = new Image();
+      image.onload = () => {
+        observer.next(image);
+        observer.complete();
+      };
+      image.src = imageUrl;
+    });
+  }
 
   getUserByCookieId(): Observable<IUser> {
     return this.http

@@ -140,3 +140,10 @@ export const assets: AssetsStructure = {
     yAdjust: 25
   }
 };
+
+export interface KeyedImage {
+  key: AssetTypes;
+  element: HTMLImageElement;
+}
+
+export type LoadedImages = Record<AssetTypes, HTMLImageElement>;

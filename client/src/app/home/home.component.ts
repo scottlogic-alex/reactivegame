@@ -3,9 +3,17 @@ import { Component, OnInit, ViewChild, ElementRef } from "@angular/core";
 import { AppState } from "../app.service";
 import { Title } from "./title";
 import { IUser } from "../user";
-import { assets, IAsset, IHat } from "../asset";
-import { Observable, forkJoin, Observer } from "rxjs";
+import {
+  assets,
+  IAsset,
+  IHat,
+  AssetTypes,
+  LoadedImages,
+  KeyedImage
+} from "../asset";
+import { forkJoin } from "rxjs";
 import { CookieService } from "angular2-cookie/core";
+import { map } from "rxjs/operators";
 
 @Component({
   selector: "home",
@@ -84,17 +92,6 @@ export class HomeComponent implements OnInit {
     );
   }
 
-  public getImage(imageUrl: string): Observable<HTMLImageElement> {
-    return Observable.create((observer: Observer<HTMLImageElement>) => {
-      var image = new Image();
-      image.onload = () => {
-        observer.next(image);
-        observer.complete();
-      };
-      image.src = imageUrl;
-    });
-  }
-
   public saveHat(): void {
     console.log(this.selectedHat);
     this.appService.setInUseHatByCookieId(this.selectedHat.id).subscribe();
@@ -128,44 +125,49 @@ export class HomeComponent implements OnInit {
 
   public ngOnInit() {
     console.log("hello `Home` component");
-
-    // this.cookieService.put("test", "testing");
-    // console.log("set test cookie as test");
-    // console.log(this.getCookie("test"));
-    // this.appService.getUserByCookieId().subscribe(user => {
-    //   console.log(user);
-    // });
-
     this.wormContext = this.worm.nativeElement.getContext("2d");
     this.colourContext = this.colour.nativeElement.getContext("2d");
     forkJoin(
       this.appService.getUserByCookieId(),
-      this.getImage(this.assets.Eyes.url)
-      // this.getImage(this.assets.fedora.url),
-      // this.getImage(this.assets.sombrero.url)
-    ).subscribe(
-      ([user, eyesImage /*fedoraImage, sombreroImage*/]: [
-        IUser,
-        HTMLImageElement
-        // HTMLImageElement,
-        // HTMLImageElement
-      ]) => {
-        console.log(user);
-        this.user = user;
-        this.fillSquare(user.colour);
-        this.drawWorm(user.colour, eyesImage);
-        this.eyes = eyesImage;
-        let hat = user.items.find(
-          item => item.type == "Hat" && item.inUse == true
-        );
-        if (hat) {
-          console.log("hat found");
-          let hatImage = new Image();
-          hatImage.src = assets[hat.name].url;
-          this.drawCustom(assets[hat.name], hatImage);
-        }
+      forkJoin(
+        Object.entries(this.assets).map(([key, asset]: [AssetTypes, IAsset]) =>
+          this.appService.getImage(asset.url).pipe(
+            map(
+              (element: HTMLImageElement): KeyedImage => ({
+                key,
+                element
+              })
+            )
+          )
+        )
+      ).pipe(
+        map(
+          (keyedImages: KeyedImage[]): LoadedImages =>
+            keyedImages.reduce(
+              (
+                acc: Partial<LoadedImages>,
+                image: KeyedImage
+              ): Partial<LoadedImages> => {
+                acc[image.key] = image.element;
+                return acc;
+              },
+              {}
+            ) as LoadedImages
+        )
+      )
+    ).subscribe(([user, keyedImages]: [IUser, LoadedImages]) => {
+      console.log(keyedImages);
+      this.user = user;
+      this.fillSquare(user.colour);
+      this.drawWorm(user.colour, keyedImages.Eyes);
+      this.eyes = keyedImages.Eyes;
+      let hat = user.items.find(
+        item => item.type == "Hat" && item.inUse == true
+      );
+      if (hat) {
+        this.drawCustom(assets[hat.name], keyedImages[hat.name]);
       }
-    );
+    });
   }
 }
 

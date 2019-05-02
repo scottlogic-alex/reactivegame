@@ -11,7 +11,9 @@ import {
   Subject,
   BehaviorSubject,
   animationFrameScheduler,
-  Observable
+  Observable,
+  forkJoin,
+  combineLatest
 } from "rxjs";
 import {
   takeUntil,
@@ -20,7 +22,8 @@ import {
   retry,
   throttleTime,
   tap,
-  switchMapTo
+  switchMapTo,
+  map
 } from "rxjs/operators";
 import {
   WebSocketSubject,
@@ -28,7 +31,7 @@ import {
   WebSocketSubjectConfig
 } from "rxjs/websocket";
 import { AppState } from "../app.service";
-import { IAsset, assets } from "../asset";
+import { IAsset, assets, KeyedImage, LoadedImages, AssetTypes } from "../asset";
 import { IUser } from "app/user";
 /**
  * We're loading this component asynchronously
@@ -63,6 +66,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
     points: 0,
     hat: ""
   };
+  public assets = assets;
 
   @ViewChild("myCanvas", { read: ElementRef }) myCanvas: IElementRef<
     HTMLCanvasElement
@@ -92,12 +96,14 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.context.fill();
   }
 
-  private drawCustom(position: IPosition, image: IAsset) {
+  private drawCustom(
+    position: IPosition,
+    image: IAsset,
+    imageSource: HTMLImageElement
+  ) {
     this.context.globalAlpha = 1;
-    var img = new Image();
-    img.src = image.url;
     this.context.drawImage(
-      img,
+      imageSource,
       position.x - image.xAdjust,
       position.y - image.yAdjust,
       image.width,
@@ -141,6 +147,33 @@ export class BarrelComponent implements OnInit, OnDestroy {
     this.clientWebSocket$ = webSocket(config);
     this.mouseEvents$.next({ x: 0, y: 0 });
 
+    const images$: Observable<LoadedImages> = forkJoin(
+      Object.entries(this.assets).map(([key, asset]: [AssetTypes, IAsset]) =>
+        this.appService.getImage(asset.url).pipe(
+          map(
+            (element: HTMLImageElement): KeyedImage => ({
+              key,
+              element
+            })
+          )
+        )
+      )
+    ).pipe(
+      map(
+        (keyedImages: KeyedImage[]): LoadedImages =>
+          keyedImages.reduce(
+            (
+              acc: Partial<LoadedImages>,
+              image: KeyedImage
+            ): Partial<LoadedImages> => {
+              acc[image.key] = image.element;
+              return acc;
+            },
+            {}
+          ) as LoadedImages
+      )
+    );
+
     this.appService
       .getUserByCookieId()
       .pipe(
@@ -153,7 +186,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe(
-        msg => {
+        (msg: string) => {
           let gameState = JSON.parse(msg);
           let game: IGameState = {
             playerStates: gameState.playerStates
@@ -193,55 +226,68 @@ export class BarrelComponent implements OnInit, OnDestroy {
 
     interval(0, animationFrameScheduler)
       .pipe(
-        withLatestFrom(this.gameStates$.pipe(distinctUntilChanged())),
+        withLatestFrom(this.gameStates$.pipe(distinctUntilChanged()), images$),
         takeUntil(this.destroy$)
       )
-      .subscribe(([, gameState]: [never, IGameState]) => {
-        this.context.clearRect(0, 0, this.width, this.height);
-        gameState.playerStates.forEach(playerState => {
-          let colour = playerState.colour;
-          playerState.positions.forEach((coords, idx) => {
-            this.draw(colour, coords, idx / 4);
-          });
-          if (playerState.positions.length) {
-            this.drawCustom(
-              playerState.positions[playerState.positions.length - 1],
-              assets.Eyes
-            );
-            if (playerState.hat) {
+      .subscribe(
+        ([, gameState, loadedImages]: [never, IGameState, LoadedImages]) => {
+          this.context.clearRect(0, 0, this.width, this.height);
+          gameState.playerStates.forEach(playerState => {
+            let colour = playerState.colour;
+            playerState.positions.forEach((coords, idx) => {
+              this.draw(colour, coords, idx / 4);
+            });
+            if (playerState.positions.length) {
               this.drawCustom(
                 playerState.positions[playerState.positions.length - 1],
-                assets[playerState.hat]
+                this.assets.Eyes,
+                loadedImages.Eyes
+              );
+              if (playerState.hat) {
+                this.drawCustom(
+                  playerState.positions[playerState.positions.length - 1],
+                  assets[playerState.hat],
+                  loadedImages[playerState.hat]
+                );
+              }
+              this.writeName(
+                playerState.positions[playerState.positions.length - 1],
+                `${playerState.username}: ${playerState.points}`
               );
             }
-            this.writeName(
-              playerState.positions[playerState.positions.length - 1],
-              `${playerState.username}: ${playerState.points}`
-            );
-          }
-        });
-        if (gameState.playerStates.length > 1) {
-          this.winner = gameState.playerStates.reduce((currentBest, worm) => {
-            if (worm.points > currentBest.points) {
-              return worm;
+          });
+          if (gameState.playerStates.length > 1) {
+            this.winner = gameState.playerStates.reduce((currentBest, worm) => {
+              if (worm.points > currentBest.points) {
+                return worm;
+              }
+              return currentBest;
+            }, this.winner);
+
+            let winner = gameState.playerStates
+              .filter(worm => worm.positions.length === 10)
+              .sort((a, b) => b.points - a.points);
+            if (winner && winner.length) {
+              this.drawCustom(
+                winner[0].positions[9],
+                assets.Crown,
+                loadedImages.Crown
+              );
             }
-            return currentBest;
-          }, this.winner);
-
-          let winner = gameState.playerStates
-            .filter(worm => worm.positions.length === 10)
-            .sort((a, b) => b.points - a.points);
-          if (winner && winner.length) {
-            this.drawCustom(winner[0].positions[9], assets.Crown);
           }
-        }
 
-        this.collisions.forEach(collision => {
-          this.drawCustom(collision.position, assets.Collision);
-        });
-        if (this.apple) this.drawCustom(this.apple, assets.Apple);
-        // if (this.hat) this.drawCustom(this.hat.position, assets[this.hat.type]);
-      });
+          this.collisions.forEach(collision => {
+            this.drawCustom(
+              collision.position,
+              assets.Collision,
+              loadedImages.Collision
+            );
+          });
+          if (this.apple)
+            this.drawCustom(this.apple, assets.Apple, loadedImages.Apple);
+          // if (this.hat) this.drawCustom(this.hat.position, assets[this.hat.type]);
+        }
+      );
 
     this.mouseEvents$
       .pipe(
