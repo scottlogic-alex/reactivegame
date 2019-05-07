@@ -53,16 +53,22 @@ class LolController {
 
     @GetMapping("/id")
     @ExperimentalUnsignedTypes
-    fun getUserByIdUsingCookie(@CookieValue(value = "id", defaultValue = "") id: String, response: ServerHttpResponse): Optional<User> {
+    fun getUserByIdUsingCookie(
+            @CookieValue(value = "id", defaultValue = "") id: String,
+            response: ServerHttpResponse,
+            request: ServerHttpRequest): Optional<User> {
         println(id)
         if (id == "") {
+            val hostname = request.remoteAddress?.hostName
             val user = User(
                     id = "",
                     name = "new user",
                     colour = getColour(Random.nextUBytes(3)),
                     items = listOf(),
-                    host = UUID.randomUUID().toString()
+                    host = "",
+                    current_points = 0
             )
+            if (hostname != null) user.host = hostname
             val savedUser = userRepository.save(user)
             response.addCookie(ResponseCookie.from("id", savedUser.id).path("/").build())
             return Optional.of(savedUser)

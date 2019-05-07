@@ -105,6 +105,11 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             val type: String = hats[Random.nextInt(0, 9)]
             gameState.hat = HatDrop(position = Position(x = x, y = y), type = type)
             sink?.next(Unit)
+            val timer = Timer()
+            timer.schedule(timerTask{
+                gameState.hat = null
+                sink?.next(Unit)
+            }, 10000)
         }
     }
 
@@ -129,7 +134,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     }.publish().autoConnect() //.share()
     private val physicsUpdate = Flux.interval(Duration.ofMillis(100L)).publish().autoConnect()
     private val appleDrop = Flux.interval(Duration.ofMillis(5000L)).publish().autoConnect()
-    private val hatDrop = Flux.interval(Duration.ofSeconds(Random.nextLong(1, 10))).publish().autoConnect()
+    private val hatDrop = Flux.interval(Duration.ofSeconds(Random.nextLong(60, 180))).publish().autoConnect()
     private var colourUpdateSubscription: Disposable? = null
     private var nameUpdateSubscription: Disposable? = null
     private var disposableSubscription: Disposable? = null
@@ -156,8 +161,8 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         return false
     }
 
-    fun appleCollect(wormPosition: Position, applePosition: Position): Boolean {
-        return (wormPosition.x - (applePosition.x + 35)).toDouble().pow(2) + (wormPosition.y - (applePosition.y + 35)).toDouble().pow(2) < 40.0.pow(2)
+    fun itemCollect(wormPosition: Position, itemPosition: Position): Boolean {
+        return (wormPosition.x - (itemPosition.x + 35)).toDouble().pow(2) + (wormPosition.y - (itemPosition.y + 35)).toDouble().pow(2) < 40.0.pow(2)
     }
 
     fun waitOneSec(coordinates: List<Position>){
@@ -170,45 +175,48 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     }
 
     fun calculatePosition(thisPlayerState: PlayerState): Position {
-        val oldPosition = thisPlayerState.positions.last()
-        val dx = (thisPlayerState.mousePosition.x - oldPosition.x).toDouble()
-        val dy = (thisPlayerState.mousePosition.y - oldPosition.y).toDouble()
-        var theta = Math.atan2(dy, dx)
+        synchronized(thisPlayerState) {
 
-        val maxAngle = 0.628319
+            val oldPosition = thisPlayerState.positions.last()
+            val dx = (thisPlayerState.mousePosition.x - oldPosition.x).toDouble()
+            val dy = (thisPlayerState.mousePosition.y - oldPosition.y).toDouble()
+            var theta = Math.atan2(dy, dx)
 
-        val compromise: Double
-        val current = thisPlayerState.angle + Math.PI
-        val intended = theta + Math.PI
-        val upper = current + maxAngle
-        val lower = current - maxAngle
+            val maxAngle = 0.628319
 
-        if (Math.abs(intended - current) < Math.PI) {
-            if (intended >= current) {
-                compromise = Math.min(intended, upper) - Math.PI
-            } else {
-                compromise = Math.max(intended, lower) - Math.PI
-            }
-        } else {
-            if (intended >= current) {
-                if (lower > 0) {
-                    compromise = lower - Math.PI
+            val compromise: Double
+            val current = thisPlayerState.angle + Math.PI
+            val intended = theta + Math.PI
+            val upper = current + maxAngle
+            val lower = current - maxAngle
+
+            if (Math.abs(intended - current) < Math.PI) {
+                if (intended >= current) {
+                    compromise = Math.min(intended, upper) - Math.PI
                 } else {
-                    compromise = lower + Math.PI
+                    compromise = Math.max(intended, lower) - Math.PI
                 }
             } else {
-                if (upper < 2*Math.PI) {
-                    compromise = upper - Math.PI
+                if (intended >= current) {
+                    if (lower > 0) {
+                        compromise = lower - Math.PI
+                    } else {
+                        compromise = lower + Math.PI
+                    }
                 } else {
-                    compromise = upper - 3*Math.PI
+                    if (upper < 2 * Math.PI) {
+                        compromise = upper - Math.PI
+                    } else {
+                        compromise = upper - 3 * Math.PI
+                    }
                 }
             }
+            thisPlayerState.angle = compromise
+            val maxMovement = 20
+            val x = oldPosition.x + (Math.cos(compromise) * maxMovement)
+            val y = oldPosition.y + (Math.sin(compromise) * maxMovement)
+            return Position(x.toInt(), y.toInt())
         }
-        thisPlayerState.angle = compromise
-        val maxMovement = 20
-        val x = oldPosition.x + (Math.cos(compromise) * maxMovement)
-        val y = oldPosition.y + (Math.sin(compromise) * maxMovement)
-        return Position(x.toInt(), y.toInt())
     }
 
     fun updatePositions(thisPlayerState: PlayerState, currentCoordinate: Position) {
@@ -227,17 +235,40 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             waitOneSec(collisions)
             gameState.recent = currentCoordinate
         }
-        if (gameState.apple != null && appleCollect(currentCoordinate, gameState.apple!!)) {
+        if (gameState.apple != null && itemCollect(currentCoordinate, gameState.apple!!)) {
             thisPlayerState.points++
             gameState.apple = null
         }
+
+        hatCollect(currentCoordinate, thisPlayerState)
+
         sink?.next(Unit)
+    }
+
+    @Synchronized fun hatCollect(currentCoordinate: Position, thisPlayerState: PlayerState) {
+        val hat = gameState.hat
+        if (hat != null && itemCollect(currentCoordinate, hat.position)) {
+            val user = userRepository.findById(thisPlayerState.userId).get()
+            if (user.items.filterIsInstance<Hat>().find{userHat -> userHat.name == hat.type} == null) {
+                var newHat = Hat()
+                newHat.name = hat.type
+                newHat.inUse = false
+                newHat.consumable = false
+                newHat.user = user
+                newHat.id = UUID.randomUUID().toString()
+                user.items += newHat
+                userRepository.save(user)
+            }
+            gameState.hat = null
+        }
+
     }
 
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
 
-        var user: Optional<User> = Optional.of( User(id = "", name = "", colour = "", host = "", items = listOf()))
+
+        var user: Optional<User> = Optional.of( User(id = "", name = "", colour = "", host = "", items = listOf(), current_points = 0))
         val cookie = session.handshakeInfo.headers.getValue("Cookie").map { cookie ->
             val arr = cookie.split("=")
             Cookie(key = arr[0], value = arr[1])
@@ -258,6 +289,10 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                 hat = existingUser.items.filterIsInstance<Hat>().find { hat -> hat.inUse == true }?.name
             }
 
+        if (gameState.playerStates.find{ user -> user.userId == existingUser.id } != null) {
+            throw IllegalArgumentException("user session already exists")
+        }
+
         thisPlayerState = PlayerState(
                 userId = existingUser.id,
                 username = existingUser.name,
@@ -265,7 +300,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                 colour = existingUser.colour,
                 mousePosition = Position(-1, -1),
                 angle = 0.0,
-                points = 0,
+                points = existingUser.current_points,
                 hat = hat
         )
         synchronized(gameState.playerStates) {
@@ -307,12 +342,16 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                         }
                         .then<WebSocketMessage>(Mono.create{
                             synchronized(gameState.playerStates) {
+                                println(thisPlayerState.points)
+                                userRepository.updateUserCurrentPointsById(points = thisPlayerState.points, id = thisPlayerState.userId)
                                 gameState.playerStates -= thisPlayerState
                                 sink?.next(Unit)
                             }
                         })
         ).doAfterTerminate{
             synchronized(gameState.playerStates) {
+                println(thisPlayerState.points)
+                userRepository.updateUserCurrentPointsById(points = thisPlayerState.points, id = thisPlayerState.userId)
                 gameState.playerStates -= thisPlayerState
                 sink?.next(Unit)
             }

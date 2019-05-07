@@ -24,7 +24,8 @@ data class User(
         var host: String,
         @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], targetEntity = Item::class)
         @JsonManagedReference
-        var items: List<Item>
+        var items: List<Item>,
+        var current_points: Int
 )
 
 @Entity
