@@ -1,14 +1,27 @@
 <h1>Worm Lobby</h1>
-<h2>Welcome {{ user.name }}</h2>
+<h2>
+  Welcome
+</h2>
+<input
+  [(ngModel)]="username"
+  placeholder="{{ username }}"
+  class="name"
+  maxLength="30"
+/>
 <h2>
   Your worm has colour:
-  <canvas
-    #colour
-    width="30"
-    height="30"
-    style="border:1px solid"
-    class="colourCanvas"
-  ></canvas>
+  <button
+    [(colorPicker)]="color"
+    [style.background]="color"
+    [cpOutputFormat]="'hex'"
+    [cpOKButton]="true"
+    (colorPickerSelect)="changeColour()"
+    [cpAlphaChannel]="'disabled'"
+    [cpDisableInput]="false"
+    class="colour"
+    [cpSaveClickOutside]="false"
+    [cpCloseClickOutside]="true"
+  ></button>
 </h2>
 <h2>You have {{ user.items.length }} items:</h2>
 <div
@@ -17,7 +30,10 @@
   fxLayoutAlign="center center"
   class="hats"
 >
-  <div *ngFor="let item of user.items">
+  <button (click)="decrease(i)" [disabled]="i == 0" class="scroll" fxFlex="10">
+    <i class="fas fa-arrow-alt-circle-left"></i>
+  </button>
+  <div *ngFor="let item of user.items.slice(i, i + 3)" fxFlex="10">
     <img
       (click)="selectHat(item)"
       class="hat"
@@ -27,14 +43,22 @@
       width="{{ assets[item.name.toString()].width * 2 }}"
     />
   </div>
-  <img
-    class="clear"
-    (click)="clearHat()"
-    src="{{ assets.clear.url }}"
-    alt="clear"
-    height="{{ assets.clear.height }}"
-    width="{{ assets.clear.width }}"
-  />
+  <button
+    fxFlex="10"
+    (click)="increase(i)"
+    [disabled]="i == user.items.length - 3"
+    class="scroll"
+  >
+    <i class="fas fa-arrow-alt-circle-right"></i>
+  </button>
 </div>
+<img
+  class="clear"
+  (click)="clearHat()"
+  src="{{ assets.clear.url }}"
+  alt="clear"
+  height="{{ assets.clear.height }}"
+  width="{{ assets.clear.width }}"
+/>
 <canvas #worm width="300" height="400" class="wormCanvas"></canvas>
-<button (click)="saveHat()" class="saveButton">Save selection</button>
+<button (click)="save()" class="saveButton">Save all</button>

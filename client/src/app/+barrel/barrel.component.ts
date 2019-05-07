@@ -12,8 +12,7 @@ import {
   BehaviorSubject,
   animationFrameScheduler,
   Observable,
-  forkJoin,
-  combineLatest
+  forkJoin
 } from "rxjs";
 import {
   takeUntil,
@@ -165,10 +164,10 @@ export class BarrelComponent implements OnInit, OnDestroy {
             (
               acc: Partial<LoadedImages>,
               image: KeyedImage
-            ): Partial<LoadedImages> => {
-              acc[image.key] = image.element;
-              return acc;
-            },
+            ): Partial<LoadedImages> => ({
+              ...acc,
+              [image.key]: image.element
+            }),
             {}
           ) as LoadedImages
       )
@@ -285,7 +284,12 @@ export class BarrelComponent implements OnInit, OnDestroy {
           });
           if (this.apple)
             this.drawCustom(this.apple, assets.Apple, loadedImages.Apple);
-          // if (this.hat) this.drawCustom(this.hat.position, assets[this.hat.type]);
+          if (this.hat)
+            this.drawCustom(
+              this.hat.position,
+              assets[this.hat.type],
+              loadedImages[this.hat.type]
+            );
         }
       );
 

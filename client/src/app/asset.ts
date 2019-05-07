@@ -8,10 +8,10 @@ export interface IAsset {
 
 export interface IHat {
   id: string;
-  consumable: false;
+  consumable: boolean;
+  type: string;
   inUse: boolean;
   name: string;
-  type: "Hat";
 }
 
 export type AssetTypes =
@@ -99,10 +99,10 @@ export const assets: AssetsStructure = {
   },
   viking: {
     url: "/assets/img/viking.png",
-    width: 70,
-    height: 60,
-    xAdjust: 40,
-    yAdjust: 65
+    width: 60,
+    height: 50,
+    xAdjust: 35,
+    yAdjust: 60
   },
   Apple: {
     url: "/assets/img/apple.png",

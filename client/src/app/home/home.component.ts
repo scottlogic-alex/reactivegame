@@ -41,22 +41,37 @@ export class HomeComponent implements OnInit {
     type: "Hat"
   };
   public assets = assets;
-  public eyes;
+  public i: number = 0;
+  public color: string = "";
+  public username: string = "";
+  public images: Record<AssetTypes, HTMLImageElement>;
 
   @ViewChild("worm", { read: ElementRef }) worm: IElementRef<HTMLCanvasElement>;
   public wormContext: CanvasRenderingContext2D;
 
-  @ViewChild("colour", { read: ElementRef }) colour: IElementRef<
-    HTMLCanvasElement
-  >;
-  public colourContext: CanvasRenderingContext2D;
-
-  private fillSquare(colour: string): void {
-    this.colourContext.fillStyle = colour;
-    this.colourContext.fillRect(0, 0, 30, 30);
+  public increase(): void {
+    if (this.i < this.user.items.length - 3) {
+      this.i++;
+    }
   }
 
-  private drawWorm(colour: string, eyes: HTMLImageElement): void {
+  public decrease(): void {
+    if (this.i > 0) {
+      this.i--;
+    }
+  }
+
+  public changeColour(): void {
+    this.appService.updateColourByCookieId(this.color).subscribe();
+    this.wormContext.clearRect(0, 0, 300, 300);
+    this.drawWorm(this.color);
+    this.drawCustom(
+      this.assets[this.selectedHat.name],
+      this.images[this.selectedHat.name]
+    );
+  }
+
+  private drawWorm(colour: string): void {
     this.wormContext.globalAlpha = 1;
     this.wormContext.lineWidth = 3;
     this.wormContext.strokeStyle = "black";
@@ -78,10 +93,11 @@ export class HomeComponent implements OnInit {
       this.wormContext.stroke();
       this.wormContext.fill();
     }
-    this.drawCustom(assets.Eyes, eyes);
+    this.drawCustom(assets.Eyes, this.images.Eyes);
   }
 
   private drawCustom(image: IAsset, imageSource: HTMLImageElement) {
+    // console.log(image);
     this.wormContext.globalAlpha = 1;
     this.wormContext.drawImage(
       imageSource,
@@ -92,19 +108,21 @@ export class HomeComponent implements OnInit {
     );
   }
 
-  public saveHat(): void {
+  public save(): void {
     console.log(this.selectedHat);
     this.appService.setInUseHatByCookieId(this.selectedHat.id).subscribe();
+    this.appService.updateUsernameByCookieId(this.username).subscribe();
   }
 
   public selectHat(hat: IHat): void {
     this.selectedHat = hat;
     this.wormContext.clearRect(0, 0, 300, 300);
-    this.drawWorm(this.user.colour, this.eyes);
+    this.drawWorm(this.user.colour);
     if (hat.name) {
-      var hatImage = new Image();
-      hatImage.src = assets[this.selectedHat.name].url;
-      this.drawCustom(assets[this.selectedHat.name], hatImage);
+      this.drawCustom(
+        assets[this.selectedHat.name],
+        this.images[this.selectedHat.name]
+      );
     }
   }
 
@@ -126,7 +144,6 @@ export class HomeComponent implements OnInit {
   public ngOnInit() {
     console.log("hello `Home` component");
     this.wormContext = this.worm.nativeElement.getContext("2d");
-    this.colourContext = this.colour.nativeElement.getContext("2d");
     forkJoin(
       this.appService.getUserByCookieId(),
       forkJoin(
@@ -158,13 +175,15 @@ export class HomeComponent implements OnInit {
     ).subscribe(([user, keyedImages]: [IUser, LoadedImages]) => {
       console.log(keyedImages);
       this.user = user;
-      this.fillSquare(user.colour);
-      this.drawWorm(user.colour, keyedImages.Eyes);
-      this.eyes = keyedImages.Eyes;
+      this.color = user.colour;
+      this.username = user.name;
+      this.images = keyedImages;
+      this.drawWorm(user.colour);
       let hat = user.items.find(
         item => item.type == "Hat" && item.inUse == true
       );
       if (hat) {
+        this.selectedHat = hat;
         this.drawCustom(assets[hat.name], keyedImages[hat.name]);
       }
     });

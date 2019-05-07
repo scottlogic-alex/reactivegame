@@ -44,6 +44,7 @@ export class AppState {
   }
 
   updateUsernameByCookieId(username: String): Observable<Object> {
+    console.log(username);
     return this.http
       .put(`http://ws00100:8080/lol/id/name`, username, this.httpOptions)
       .pipe();

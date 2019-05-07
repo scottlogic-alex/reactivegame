@@ -37,6 +37,18 @@
   height: 40px;
 }
 
+.name:focus {
+  outline: none;
+}
+
+.send:focus {
+  outline: none;
+}
+
+.colour:focus {
+  outline: none;
+}
+
 .grid-container {
   display: inline-grid;
   align-items: center;
