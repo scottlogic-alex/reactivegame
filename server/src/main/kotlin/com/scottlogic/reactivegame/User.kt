@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.sun.org.apache.xpath.internal.operations.Bool
 import org.hibernate.annotations.GenericGenerator
+import java.sql.Timestamp
 import javax.persistence.*
 
 @Entity
@@ -25,7 +26,8 @@ data class User(
         @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], targetEntity = Item::class)
         @JsonManagedReference
         var items: List<Item>,
-        var current_points: Int
+        var current_points: Int,
+        var last_activity: Timestamp
 )
 
 @Entity

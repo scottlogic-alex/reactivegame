@@ -12,6 +12,12 @@ interface UserRepository: CrudRepository<User, String> {
     "update User u set current_points = :points where u.id = :id")
     fun updateUserCurrentPointsById (points: Int, id: String)
 
+    @Modifying
+    @Transactional
+    @Query(value = //language=JPAQL
+    "update User u set last_activity = current_timestamp where u.id = :id")
+    fun updateUserLastActivityById (id: String)
+
     @Query(value = "UPDATE firsttest.users SET colour = :colour WHERE id = :id", nativeQuery = true)
     fun updateUserSetColourById (colour: String, id: String)
 

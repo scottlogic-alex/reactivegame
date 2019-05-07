@@ -13,7 +13,12 @@ import reactor.core.Disposable
 import reactor.core.publisher.*
 import java.util.*
 import reactor.core.publisher.Flux
+import java.sql.Date
+import java.sql.Time
+import java.sql.Timestamp
 import java.time.Duration
+import java.time.Instant
+import javax.validation.constraints.Null
 import kotlin.collections.ArrayList
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
@@ -268,7 +273,9 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     override fun handle(session: WebSocketSession): Mono<Void> {
 
 
-        var user: Optional<User> = Optional.of( User(id = "", name = "", colour = "", host = "", items = listOf(), current_points = 0))
+        var user: Optional<User> = Optional.of(
+                User(id = "", name = "", colour = "", host = "", items = listOf(), current_points = 0, last_activity = Timestamp(Date().time)))
+        println(user.get().last_activity)
         val cookie = session.handshakeInfo.headers.getValue("Cookie").map { cookie ->
             val arr = cookie.split("=")
             Cookie(key = arr[0], value = arr[1])
@@ -290,8 +297,10 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             }
 
         if (gameState.playerStates.find{ user -> user.userId == existingUser.id } != null) {
-            throw IllegalArgumentException("user session already exists")
+            return(Mono.error(Throwable("user session already exists")))
         }
+
+
 
         thisPlayerState = PlayerState(
                 userId = existingUser.id,
@@ -300,14 +309,19 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                 colour = existingUser.colour,
                 mousePosition = Position(-1, -1),
                 angle = 0.0,
-                points = existingUser.current_points,
+                points = 0,
                 hat = hat
         )
+
+        if (existingUser.last_activity > Timestamp(Date().time - 300000)) {
+            thisPlayerState.points = existingUser.current_points
+        }
+
         synchronized(gameState.playerStates) {
             gameState.playerStates += thisPlayerState
         }
         } else {
-            throw IllegalArgumentException("no user found")
+            return(Mono.error(Throwable("user not found")))
         }
 
         sink?.next(Unit)
@@ -342,16 +356,16 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                         }
                         .then<WebSocketMessage>(Mono.create{
                             synchronized(gameState.playerStates) {
-                                println(thisPlayerState.points)
                                 userRepository.updateUserCurrentPointsById(points = thisPlayerState.points, id = thisPlayerState.userId)
+                                userRepository.updateUserLastActivityById(id = thisPlayerState.userId)
                                 gameState.playerStates -= thisPlayerState
                                 sink?.next(Unit)
                             }
                         })
         ).doAfterTerminate{
             synchronized(gameState.playerStates) {
-                println(thisPlayerState.points)
                 userRepository.updateUserCurrentPointsById(points = thisPlayerState.points, id = thisPlayerState.userId)
+                userRepository.updateUserLastActivityById(id = thisPlayerState.userId)
                 gameState.playerStates -= thisPlayerState
                 sink?.next(Unit)
             }

@@ -6,6 +6,7 @@ import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
+import java.sql.Timestamp
 import java.util.*
 import javax.transaction.Transactional
 import kotlin.random.Random
@@ -66,7 +67,8 @@ class LolController {
                     colour = getColour(Random.nextUBytes(3)),
                     items = listOf(),
                     host = "",
-                    current_points = 0
+                    current_points = 0,
+                    last_activity = Timestamp(Date().time)
             )
             if (hostname != null) user.host = hostname
             val savedUser = userRepository.save(user)
