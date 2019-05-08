@@ -61,17 +61,8 @@ export class HomeComponent implements OnInit {
     }
   }
 
-  public changeColour(): void {
-    this.appService.updateColourByCookieId(this.color).subscribe();
-    this.wormContext.clearRect(0, 0, 300, 300);
-    this.drawWorm(this.color);
-    this.drawCustom(
-      this.assets[this.selectedHat.name],
-      this.images[this.selectedHat.name]
-    );
-  }
-
   private drawWorm(colour: string): void {
+    this.wormContext.clearRect(0, 0, 300, 300);
     this.wormContext.globalAlpha = 1;
     this.wormContext.lineWidth = 3;
     this.wormContext.strokeStyle = "black";
@@ -94,10 +85,15 @@ export class HomeComponent implements OnInit {
       this.wormContext.fill();
     }
     this.drawCustom(assets.Eyes, this.images.Eyes);
+    if (this.selectedHat.name) {
+      this.drawCustom(
+        assets[this.selectedHat.name],
+        this.images[this.selectedHat.name]
+      );
+    }
   }
 
   private drawCustom(image: IAsset, imageSource: HTMLImageElement) {
-    // console.log(image);
     this.wormContext.globalAlpha = 1;
     this.wormContext.drawImage(
       imageSource,
@@ -108,22 +104,45 @@ export class HomeComponent implements OnInit {
     );
   }
 
+  public changeColour(): void {
+    this.drawWorm(this.color);
+    this.drawCustom(
+      this.assets[this.selectedHat.name],
+      this.images[this.selectedHat.name]
+    );
+  }
+
+  public cancel(): void {
+    this.color = this.user.colour;
+    this.username = this.user.name;
+    this.selectedHat = this.user.items.find(
+      item => item.type === "Hat" && item.inUse === true
+    );
+    this.drawWorm(this.color);
+  }
+
   public save(): void {
-    console.log(this.selectedHat);
-    this.appService.setInUseHatByCookieId(this.selectedHat.id).subscribe();
-    this.appService.updateUsernameByCookieId(this.username).subscribe();
+    this.saveHat(this.selectedHat.id);
+    this.saveName(this.username);
+    this.saveColour(this.color);
+  }
+
+  private saveName(username: string): void {
+    this.appService.updateUsernameByCookieId(username).subscribe();
+  }
+
+  private saveHat(hatId: string): void {
+    this.appService.setInUseHatByCookieId(hatId).subscribe();
+  }
+
+  private saveColour(colour: string): void {
+    this.appService.updateColourByCookieId(this.color).subscribe();
   }
 
   public selectHat(hat: IHat): void {
     this.selectedHat = hat;
-    this.wormContext.clearRect(0, 0, 300, 300);
-    this.drawWorm(this.user.colour);
-    if (hat.name) {
-      this.drawCustom(
-        assets[this.selectedHat.name],
-        this.images[this.selectedHat.name]
-      );
-    }
+
+    this.drawWorm(this.color);
   }
 
   public clearHat(): void {

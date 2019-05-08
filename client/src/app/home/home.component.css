@@ -48,10 +48,8 @@ h2 {
 }
 
 .saveButton {
-  margin-left: auto;
-  margin-right: auto;
-  display: block;
-  margin-top: 50px;
+  display: inline-block;
+  margin: 10px;
   background-color: #00bcd4;
   color: #004149;
   border-style: outset;
@@ -61,6 +59,15 @@ h2 {
   font-size: 30px;
   font-weight: bolder;
   height: 50px;
+  width: 150px;
+}
+
+.buttonContainer {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  width: fit-content;
+  margin-top: 50px;
 }
 
 .clear {

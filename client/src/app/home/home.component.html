@@ -61,4 +61,7 @@
   width="{{ assets.clear.width }}"
 />
 <canvas #worm width="300" height="400" class="wormCanvas"></canvas>
-<button (click)="save()" class="saveButton">Save all</button>
+<div class="buttonContainer">
+  <button (click)="save()" class="saveButton">Save all</button>
+  <button (click)="cancel()" class="saveButton">Cancel</button>
+</div>
