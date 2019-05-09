@@ -4,6 +4,9 @@ export interface IUser {
   colour: string;
   host: string;
   items: Array<IItem>;
+  currentPoints: number;
+  lastActivity: string;
+  highScore: number;
 }
 
 export interface IItem {

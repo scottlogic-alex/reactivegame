@@ -199,7 +199,9 @@ export class BarrelComponent implements OnInit, OnDestroy {
           }
         },
         err => {
-          alert("there is already a sesson open for this user");
+          alert(
+            "either the server isn't running or this isn't your first window"
+          );
           console.error(err);
         },
         () => {

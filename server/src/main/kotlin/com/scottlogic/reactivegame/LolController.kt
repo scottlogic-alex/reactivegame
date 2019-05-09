@@ -16,6 +16,12 @@ data class Lol(
         val lol: String
 )
 
+data class SaveObject(
+        val colour: String,
+        val username: String,
+        val hatId: String
+)
+
 @RestController
 @RequestMapping("/lol")
 class LolController {
@@ -33,18 +39,6 @@ class LolController {
 
     @Autowired
     private lateinit var userNameUpdate: UserNameUpdate
-
-//    @Transactional
-//    @GetMapping("/name/{name}")
-//    fun getUserByName(@PathVariable name: String): User? {
-//        return userRepository.findByName(name)
-//    }
-//
-//    @Transactional
-//    @GetMapping("/host")
-//    fun getUserByHost(request: ServerHttpRequest): User? {
-//        return userRepository.findByHost(request.remoteAddress!!.hostName)
-//    }
 
     @ExperimentalUnsignedTypes
     private fun getColour(channels: UByteArray): String {
@@ -68,7 +62,8 @@ class LolController {
                     items = listOf(),
                     host = "",
                     current_points = 0,
-                    last_activity = Timestamp(Date().time)
+                    last_activity = Timestamp(Date().time),
+                    high_score = 0
             )
             if (hostname != null) user.host = hostname
             val savedUser = userRepository.save(user)
@@ -98,8 +93,18 @@ class LolController {
             user.items.filterIsInstance<Hat>().find { it.id == hatId }?.inUse = true
         }
         userRepository.save(user)
-//        hatRepository.setUserHatsNotInUse(user!!.id)
-//        hatRepository.setInUseTrueById(hatId)
+    }
+
+    @PutMapping("/id/user")
+    fun updateUser(@RequestBody saveObject: SaveObject, @CookieValue(value = "id", defaultValue = "") id: String) {
+        val user: User = userRepository.findById(id).get()
+        user.items.filterIsInstance<Hat>().forEach { it.inUse = false }
+        if (saveObject.hatId != "noHat") {
+            user.items.filterIsInstance<Hat>().find { it.id == saveObject.hatId }?.inUse = true
+        }
+        user.colour = saveObject.colour
+        user.name = saveObject.username
+        userRepository.save(user)
     }
 
     @GetMapping("/host/hostname")

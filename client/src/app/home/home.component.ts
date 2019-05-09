@@ -31,7 +31,10 @@ export class HomeComponent implements OnInit {
     id: "",
     host: "",
     colour: "",
-    items: []
+    items: [],
+    currentPoints: 0,
+    lastActivity: "",
+    highScore: 0
   };
   public selectedHat: IHat = {
     id: "",
@@ -122,12 +125,21 @@ export class HomeComponent implements OnInit {
   }
 
   public save(): void {
-    this.saveHat(this.selectedHat.id);
-    this.saveName(this.username);
-    this.saveColour(this.color);
+    // this.user.colour = this.color;
+    // this.user.name = this.username;
+    this.appService
+      .updateUserByCookieId(this.color, this.username, this.selectedHat.id)
+      .subscribe();
+    // this.saveHat(this.selectedHat.id);
+    // this.saveName(this.username);
+    // this.saveColour(this.color);
+    // this.appService.getUserByCookieId().subscribe(user => {
+    //   console.log(user);
+    // });
   }
 
   private saveName(username: string): void {
+    this.user.name = username;
     this.appService.updateUsernameByCookieId(username).subscribe();
   }
 
@@ -136,7 +148,8 @@ export class HomeComponent implements OnInit {
   }
 
   private saveColour(colour: string): void {
-    this.appService.updateColourByCookieId(this.color).subscribe();
+    this.user.colour = colour;
+    this.appService.updateColourByCookieId(colour).subscribe();
   }
 
   public selectHat(hat: IHat): void {
@@ -194,6 +207,7 @@ export class HomeComponent implements OnInit {
     ).subscribe(([user, keyedImages]: [IUser, LoadedImages]) => {
       console.log(keyedImages);
       this.user = user;
+      console.log(user);
       this.color = user.colour;
       this.username = user.name;
       this.images = keyedImages;

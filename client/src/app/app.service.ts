@@ -37,14 +37,12 @@ export class AppState {
   }
 
   updateColourByCookieId(colour: String): Observable<Object> {
-    console.log("sent");
     return this.http
       .put(`http://ws00100:8080/lol/id/colour`, colour, this.httpOptions)
       .pipe();
   }
 
   updateUsernameByCookieId(username: String): Observable<Object> {
-    console.log(username);
     return this.http
       .put(`http://ws00100:8080/lol/id/name`, username, this.httpOptions)
       .pipe();
@@ -55,4 +53,25 @@ export class AppState {
       .put(`http://ws00100:8080/lol/id/hats/`, hatId, this.httpOptions)
       .pipe();
   }
+
+  updateUserByCookieId(
+    colour: string,
+    username: string,
+    hatId: string
+  ): Observable<Object> {
+    var saveObject: SaveObject = {
+      colour: colour,
+      username: username,
+      hatId: hatId
+    };
+    return this.http
+      .put(`http://ws00100:8080/lol/id/user/`, saveObject, this.httpOptions)
+      .pipe();
+  }
+}
+
+interface SaveObject {
+  colour: string;
+  username: string;
+  hatId: string;
 }

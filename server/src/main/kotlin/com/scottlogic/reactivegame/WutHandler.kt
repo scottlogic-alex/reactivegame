@@ -13,12 +13,8 @@ import reactor.core.Disposable
 import reactor.core.publisher.*
 import java.util.*
 import reactor.core.publisher.Flux
-import java.sql.Date
-import java.sql.Time
 import java.sql.Timestamp
 import java.time.Duration
-import java.time.Instant
-import javax.validation.constraints.Null
 import kotlin.collections.ArrayList
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
@@ -44,7 +40,8 @@ data class PlayerState @ExperimentalUnsignedTypes constructor(
         @JsonIgnore
         var angle: Double,
         var points: Int,
-        var hat: String?
+        var hat: String?,
+        var highScore: Int
 )
 
 data class GameState (
@@ -179,9 +176,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         }, 1000)
     }
 
-    fun calculatePosition(thisPlayerState: PlayerState): Position {
-        synchronized(thisPlayerState) {
-
+    @Synchronized fun calculatePosition(thisPlayerState: PlayerState): Position {
             val oldPosition = thisPlayerState.positions.last()
             val dx = (thisPlayerState.mousePosition.x - oldPosition.x).toDouble()
             val dy = (thisPlayerState.mousePosition.y - oldPosition.y).toDouble()
@@ -221,7 +216,6 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             val x = oldPosition.x + (Math.cos(compromise) * maxMovement)
             val y = oldPosition.y + (Math.sin(compromise) * maxMovement)
             return Position(x.toInt(), y.toInt())
-        }
     }
 
     fun updatePositions(thisPlayerState: PlayerState, currentCoordinate: Position) {
@@ -274,8 +268,15 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
 
 
         var user: Optional<User> = Optional.of(
-                User(id = "", name = "", colour = "", host = "", items = listOf(), current_points = 0, last_activity = Timestamp(Date().time)))
-        println(user.get().last_activity)
+                User(
+                        id = "",
+                        name = "",
+                        colour = "",
+                        host = "",
+                        items = listOf(),
+                        current_points = 0,
+                        last_activity = Timestamp(Date().time),
+                        high_score = 0))
         val cookie = session.handshakeInfo.headers.getValue("Cookie").map { cookie ->
             val arr = cookie.split("=")
             Cookie(key = arr[0], value = arr[1])
@@ -300,8 +301,6 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             return(Mono.error(Throwable("user session already exists")))
         }
 
-
-
         thisPlayerState = PlayerState(
                 userId = existingUser.id,
                 username = existingUser.name,
@@ -310,7 +309,8 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                 mousePosition = Position(-1, -1),
                 angle = 0.0,
                 points = 0,
-                hat = hat
+                hat = hat,
+                highScore = existingUser.high_score
         )
 
         if (existingUser.last_activity > Timestamp(Date().time - 300000)) {

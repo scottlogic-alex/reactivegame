@@ -8,6 +8,8 @@ import com.sun.org.apache.xpath.internal.operations.Bool
 import org.hibernate.annotations.GenericGenerator
 import java.sql.Timestamp
 import javax.persistence.*
+import javax.xml.bind.annotation.XmlElement
+import javax.xml.bind.annotation.XmlRootElement
 
 @Entity
 @Table(name = "users")
@@ -27,7 +29,8 @@ data class User(
         @JsonManagedReference
         var items: List<Item>,
         var current_points: Int,
-        var last_activity: Timestamp
+        var last_activity: Timestamp,
+        var high_score: Int
 )
 
 @Entity
@@ -39,7 +42,7 @@ data class User(
         property = "type"
 )
 @JsonSubTypes(value = [
-        JsonSubTypes.Type(value = Item::class, name = "hat")
+        JsonSubTypes.Type(value = Item::class, name = "Hat")
 ])
 @Table(name = "items")
 class Item {
