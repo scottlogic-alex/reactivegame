@@ -31,6 +31,13 @@ export const ROOT_SELECTOR = "app";
       >
         Barrel o' worms
       </a>
+      <a
+        [routerLink]="['./leaderboard']"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Leader Board
+      </a>
     </nav>
     <main>
       <router-outlet></router-outlet>
