@@ -263,6 +263,22 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
 
     }
 
+    fun updateUserOnClose(thisPlayerState: PlayerState) {
+        synchronized(gameState.playerStates) {
+            userRepository.updateUserCurrentPointsById(
+                    points = thisPlayerState.points,
+                    id = thisPlayerState.userId)
+            userRepository.updateUserLastActivityById(id = thisPlayerState.userId)
+            if (thisPlayerState.points > thisPlayerState.highScore) {
+                userRepository.updateUserHighScoreById(
+                        score = thisPlayerState.points,
+                        id = thisPlayerState.userId)
+            }
+            gameState.playerStates -= thisPlayerState
+            sink?.next(Unit)
+        }
+    }
+
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
 
@@ -355,20 +371,10 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                             it.payloadAsText
                         }
                         .then<WebSocketMessage>(Mono.create{
-                            synchronized(gameState.playerStates) {
-                                userRepository.updateUserCurrentPointsById(points = thisPlayerState.points, id = thisPlayerState.userId)
-                                userRepository.updateUserLastActivityById(id = thisPlayerState.userId)
-                                gameState.playerStates -= thisPlayerState
-                                sink?.next(Unit)
-                            }
+                            updateUserOnClose(thisPlayerState)
                         })
         ).doAfterTerminate{
-            synchronized(gameState.playerStates) {
-                userRepository.updateUserCurrentPointsById(points = thisPlayerState.points, id = thisPlayerState.userId)
-                userRepository.updateUserLastActivityById(id = thisPlayerState.userId)
-                gameState.playerStates -= thisPlayerState
-                sink?.next(Unit)
-            }
+            updateUserOnClose(thisPlayerState)
         }
     }
 }
