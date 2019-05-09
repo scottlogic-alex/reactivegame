@@ -43,9 +43,11 @@ export class AppState {
   }
 
   updateUsernameByCookieId(username: String): Observable<Object> {
-    return this.http
-      .put(`http://ws00100:8080/lol/id/name`, username, this.httpOptions)
-      .pipe();
+    if (username.length <= 30) {
+      return this.http
+        .put(`http://ws00100:8080/lol/id/name`, username, this.httpOptions)
+        .pipe();
+    }
   }
 
   setInUseHatByCookieId(hatId: String): Observable<Object> {
@@ -66,6 +68,12 @@ export class AppState {
     };
     return this.http
       .put(`http://ws00100:8080/lol/id/user/`, saveObject, this.httpOptions)
+      .pipe();
+  }
+
+  getLeaderboard(): Observable<Object> {
+    return this.http
+      .get(`http://ws00100:8080/lol/highscores`, this.httpOptions)
       .pipe();
   }
 }

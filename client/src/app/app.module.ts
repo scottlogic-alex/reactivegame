@@ -56,7 +56,6 @@ interface StoreType {
     FlexLayoutModule,
     HttpClientModule,
     ColorPickerModule,
-    // CookieModule.forRoot(),
     RouterModule.forRoot(ROUTES, {
       useHash: Boolean(history.pushState) === false,
       preloadingStrategy: PreloadAllModules

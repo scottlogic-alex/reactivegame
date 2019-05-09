@@ -1,1 +1,28 @@
-<h1>leaderboard!</h1>
+<h1>Leader Board!</h1>
+<table>
+  <tr>
+    <th></th>
+    <th>Name</th>
+    <th>High Score</th>
+    <th>Hat</th>
+    <th>Colour</th>
+  </tr>
+  <tr *ngFor="let user of leadersList; let idx = index">
+    <td>{{ idx + 1 }}</td>
+    <td>{{ user.name }}</td>
+    <td>{{ user.high_score }}</td>
+    <td>
+      <ng-container *ngIf="user.hat as hat">
+        <ng-container *ngIf="assets[hat.name.toString()] as name">
+          <img
+            class="hatPic"
+            src="{{ name.url }}"
+            height="{{ name.height }}"
+            width="{{ name.width }}"
+          />
+        </ng-container>
+      </ng-container>
+    </td>
+    <td [ngStyle]="{ 'background-color': user.colour }"></td>
+  </tr>
+</table>
