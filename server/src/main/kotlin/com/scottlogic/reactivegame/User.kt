@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.sun.org.apache.xpath.internal.operations.Bool
 import org.hibernate.annotations.GenericGenerator
 import java.sql.Timestamp
+import java.time.*
 import javax.persistence.*
 import javax.xml.bind.annotation.XmlElement
 import javax.xml.bind.annotation.XmlRootElement
@@ -21,17 +22,24 @@ data class User(
         strategy = "org.hibernate.id.UUIDGenerator"
         )
         @Column(name = "id", updatable = false, nullable = false)
-        var id: String,
+        var id: String = "",
         var name: String,
         var colour: String,
-        var host: String,
+        var host: String = "",
         @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], targetEntity = Item::class)
         @JsonManagedReference
-        var items: List<Item>,
-        var current_points: Int,
-        var last_activity: Timestamp,
-        var high_score: Int
-)
+        var items: List<Item> = mutableListOf(),
+        var current_points: Int = 0,
+        @Column(columnDefinition = "TIMESTAMP")
+        var last_activity: Instant = Instant.EPOCH,
+        var high_score: Int = 0
+) {
+        @PrePersist
+        @PreUpdate
+        fun updateTimestamps() {
+                last_activity = Instant.now()
+        }
+}
 
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)

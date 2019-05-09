@@ -24,6 +24,10 @@ interface UserRepository: CrudRepository<User, String> {
     "update User u set high_score = :score where u.id = :id")
     fun updateUserHighScoreById (score: Int, id: String)
 
+//    @Query(value = //language=JPAQL
+//    "select u.high_score from users" )
+//    fun getHighScores(): Array<Any>
+
     @Query(value = "UPDATE firsttest.users SET colour = :colour WHERE id = :id", nativeQuery = true)
     fun updateUserSetColourById (colour: String, id: String)
 

@@ -15,6 +15,10 @@ import java.util.*
 import reactor.core.publisher.Flux
 import java.sql.Timestamp
 import java.time.Duration
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalUnit
 import kotlin.collections.ArrayList
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
@@ -279,27 +283,29 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         }
     }
 
+    fun setCurrentPoints(existingUser: User): Int {
+        if (existingUser.last_activity > Instant.now().minus(5, ChronoUnit.MINUTES)) {
+            return existingUser.current_points
+        }
+        return 0
+    }
+
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
 
-
-        var user: Optional<User> = Optional.of(
-                User(
-                        id = "",
-                        name = "",
-                        colour = "",
-                        host = "",
-                        items = listOf(),
-                        current_points = 0,
-                        last_activity = Timestamp(Date().time),
-                        high_score = 0))
         val cookie = session.handshakeInfo.headers.getValue("Cookie").map { cookie ->
             val arr = cookie.split("=")
             Cookie(key = arr[0], value = arr[1])
         }.find { cookiePair -> cookiePair.key == "id" }
 
-        if (cookie != null) {
-            user = userRepository.findById(cookie.value)
+        println(Timestamp(Date().time))
+        println(cookie)
+
+        val user: Optional<User>
+        = if (cookie == null) {
+            Optional.empty()
+        } else {
+            userRepository.findById(cookie.value)
         }
 
         println(objectMapper.writeValueAsString(user))
@@ -314,6 +320,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
             }
 
         if (gameState.playerStates.find{ user -> user.userId == existingUser.id } != null) {
+            println("throwing error, user session already exists")
             return(Mono.error(Throwable("user session already exists")))
         }
 
@@ -329,14 +336,13 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                 highScore = existingUser.high_score
         )
 
-        if (existingUser.last_activity > Timestamp(Date().time - 300000)) {
-            thisPlayerState.points = existingUser.current_points
-        }
+        thisPlayerState.points = setCurrentPoints(existingUser)
 
         synchronized(gameState.playerStates) {
             gameState.playerStates += thisPlayerState
         }
         } else {
+            println("throwing error, cannot find user with cookie id in database")
             return(Mono.error(Throwable("user not found")))
         }
 

@@ -56,14 +56,8 @@ class LolController {
         if (id == "") {
             val hostname = request.remoteAddress?.hostName
             val user = User(
-                    id = "",
                     name = "new user",
-                    colour = getColour(Random.nextUBytes(3)),
-                    items = listOf(),
-                    host = "",
-                    current_points = 0,
-                    last_activity = Timestamp(Date().time),
-                    high_score = 0
+                    colour = getColour(Random.nextUBytes(3))
             )
             if (hostname != null) user.host = hostname
             val savedUser = userRepository.save(user)
@@ -105,6 +99,11 @@ class LolController {
         user.colour = saveObject.colour
         user.name = saveObject.username
         userRepository.save(user)
+    }
+
+    @GetMapping("/highscores")
+    fun getHighScores(): Iterable<User> {
+        return userRepository.findAll().filter { user -> user.high_score > 0 }
     }
 
     @GetMapping("/host/hostname")
