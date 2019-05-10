@@ -4,13 +4,11 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonManagedReference
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.sun.org.apache.xpath.internal.operations.Bool
 import org.hibernate.annotations.GenericGenerator
-import java.sql.Timestamp
 import java.time.*
+import java.time.temporal.TemporalUnit
+import java.util.*
 import javax.persistence.*
-import javax.xml.bind.annotation.XmlElement
-import javax.xml.bind.annotation.XmlRootElement
 
 @Entity
 @Table(name = "users")
@@ -77,3 +75,26 @@ class Hat: Item() {
         @Column(name="in_use")
         var inUse: Boolean? = null
 }
+
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
+@Table(name="login_tokens")
+class Token {
+        @Id
+        @GeneratedValue(generator = "UUID")
+        @GenericGenerator(
+                name = "UUID",
+                strategy = "org.hibernate.id.UUIDGenerator"
+        )
+        @Column(name = "id", updatable = false, nullable = false)
+        var id: String? = null
+        @Column(columnDefinition = "TIMESTAMP")
+        var expiry_time: Instant = Instant.now().plusMillis(3600000) //instant now plus one hour?
+        @ManyToOne
+        @JoinColumn
+        @JsonBackReference
+        var user: User? = null
+}
+
+
+

@@ -55,4 +55,16 @@ databaseChangeLog {
     }
   }
 
+  changeSet(id: '1557320751826-5', author: 'ehield (generated)') {
+    createTable(tableName: 'login_tokens') {
+      column(name: 'token_id', type: 'VARCHAR(64)') {
+        constraints(primaryKey: true)
+      }
+      column(name: 'user_id', type: 'VARCHAR(64)')
+      column(name: 'expiry_time', type: 'timestamp')
+    }
+  }
+
+
+
 }

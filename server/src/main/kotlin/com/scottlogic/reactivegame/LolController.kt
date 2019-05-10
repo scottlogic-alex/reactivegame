@@ -1,14 +1,15 @@
 package com.scottlogic.reactivegame
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseCookie
 import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
-import java.sql.Timestamp
+import java.net.URI
+import java.time.Instant
 import java.util.*
-import javax.transaction.Transactional
 import kotlin.random.Random
 import kotlin.random.nextUBytes
 
@@ -35,6 +36,9 @@ class LolController {
     private lateinit var hatRepository: HatRepository
 
     @Autowired
+    private lateinit var tokenRepository: TokenRepository
+
+    @Autowired
     private lateinit var userColourUpdate: UserColourUpdate
 
     @Autowired
@@ -54,6 +58,7 @@ class LolController {
             request: ServerHttpRequest): Optional<User> {
         println(id)
         if (id == "") {
+            // redirect user to request a link page
             val hostname = request.remoteAddress?.hostName
             val user = User(
                     name = "new user",
@@ -104,6 +109,19 @@ class LolController {
     @GetMapping("/highscores")
     fun getHighScores(): Iterable<User> {
         return userRepository.findAll().filter { user -> user.high_score > 0 }
+    }
+
+    @GetMapping("/login/token/{token_id}")
+    fun login(@PathVariable("token_id") tokenId: String, response: ServerHttpResponse) {
+        val tokenOptional: Optional<Token> = tokenRepository.findById(tokenId)
+        if (tokenOptional.isPresent) {
+            val token = tokenOptional.get()
+            if (token.expiry_time > Instant.now()) {
+                response.statusCode = HttpStatus.FOUND
+                response.headers.location = URI("http://ws00100:3000/")
+            }
+        }
+//        return response
     }
 
     @GetMapping("/host/hostname")
