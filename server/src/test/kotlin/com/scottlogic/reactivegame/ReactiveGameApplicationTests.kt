@@ -33,11 +33,7 @@ class ReactiveGameApplicationTests {
 
 	@LocalServerPort
 	private var port: Int = 0
-//	@Autowired
-//	private lateinit var lolController: LolController
-	private var restTemplate = TestRestTemplate()
 	private var httpClient: HttpClient = HttpClientBuilder.create().disableRedirectHandling().build()
-	private var headers = HttpHeaders()
 
 	private fun createURLWithPort(uri: String): URI {
 		return URI.create("http://ws00100:$port$uri")
@@ -45,29 +41,9 @@ class ReactiveGameApplicationTests {
 
 	@Test
 	fun contextLoads() {
-		val entity = HttpEntity<String>(null, headers)
-//		val response: ResponseEntity<String> = restTemplate.exchange(
-//				createURLWithPort("/lol/host/hostname"), HttpMethod.GET, entity, String::class.java)
-
-//		val response: ClientHttpResponse = httpClient.execute(
-//				)
 		val clientHttpRequestFactory: ClientHttpRequestFactory = HttpComponentsClientHttpRequestFactory(httpClient)
 		val clientHttpRequest: ClientHttpRequest = clientHttpRequestFactory.createRequest(createURLWithPort("/lol/login/token/Elliesfirsttesttoken"), HttpMethod.GET)
-//		val requestCallback = RequestCallback { it.headers.addAll(headers) }
-//		requestCallback.doWithRequest(clientHttpRequest)
-//		val responseExtractor: ResponseExtractor<Int> = ResponseExtractor { it.rawStatusCode }
 		val response: ClientHttpResponse = clientHttpRequest.execute()
-//		val extractData: Int? = responseExtractor.extractData(response)
-
-//		val response: ClientHttpResponse = restTemplate.execute(
-//				createURLWithPort("/lol/login/token/Elliesfirsttesttoken"),
-//				HttpMethod.GET,
-//				RequestCallback {
-//					it.headers.addAll(headers)
-//				},
-//				ResponseExtractor {
-//					it
-//				})
 		val actual = response.headers[HttpHeaders.LOCATION]!![0]
 		assertThat(actual, equalTo("/register"));
 	}
