@@ -76,6 +76,12 @@ export class AppState {
       .get(`http://ws00100:8080/lol/highscores`, this.httpOptions)
       .pipe();
   }
+
+  loginWithToken(tokenId: string) {
+    return this.http
+      .get(`http://ws00100:8080/lol/login/token/${tokenId}`, this.httpOptions)
+      .pipe();
+  }
 }
 
 interface SaveObject {

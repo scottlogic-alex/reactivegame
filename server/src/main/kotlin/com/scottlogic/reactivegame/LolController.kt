@@ -119,9 +119,10 @@ class LolController {
             if (token.expiry_time > Instant.now()) {
                 response.statusCode = HttpStatus.FOUND
                 response.headers.location = URI("http://ws00100:3000/")
+                return
             }
         }
-//        return response
+        response.headers.location = URI("http://ws00100:3000/register")
     }
 
     @GetMapping("/host/hostname")
