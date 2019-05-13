@@ -1,5 +1,6 @@
 package com.scottlogic.reactivegame
 
+import com.scottlogic.reactivegame.services.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseCookie
@@ -33,6 +34,9 @@ class LolController {
     private lateinit var userRepository: UserRepository
 
     @Autowired
+    private lateinit var userService: UserService
+
+    @Autowired
     private lateinit var hatRepository: HatRepository
 
     @Autowired
@@ -56,20 +60,9 @@ class LolController {
             @CookieValue(value = "id", defaultValue = "") id: String,
             response: ServerHttpResponse,
             request: ServerHttpRequest): Optional<User> {
-        println(id)
-        if (id == "") {
-            // redirect user to request a link page
-            val hostname = request.remoteAddress?.hostName
-            val user = User(
-                    name = "new user",
-                    colour = getColour(Random.nextUBytes(3))
-            )
-            if (hostname != null) user.host = hostname
-            val savedUser = userRepository.save(user)
-            response.addCookie(ResponseCookie.from("id", savedUser.id).path("/").build())
-            return Optional.of(savedUser)
-        }
-        return userRepository.findById(id)
+            val savedUser = userService.ensureUserExists(id)
+            if (id == "") response.addCookie(ResponseCookie.from("id", savedUser.get().id).path("/").build())
+        return savedUser
     }
 
     @PutMapping("/id/colour")
