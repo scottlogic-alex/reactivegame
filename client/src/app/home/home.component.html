@@ -1,13 +1,15 @@
 <h1>Worm Lobby</h1>
-<h2>
-  Welcome
-</h2>
-<input
-  [(ngModel)]="username"
-  placeholder="{{ username }}"
-  class="name"
-  maxLength="30"
-/>
+<div class="welcomeContainer">
+  <h2 class="welcome">
+    Welcome
+  </h2>
+  <input
+    [(ngModel)]="username"
+    placeholder="{{ username }}"
+    class="name"
+    maxLength="30"
+  />
+</div>
 <h2>
   Your worm has colour:
   <button
