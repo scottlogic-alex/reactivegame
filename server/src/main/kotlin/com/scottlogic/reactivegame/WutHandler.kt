@@ -2,6 +2,7 @@ package com.scottlogic.reactivegame
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.scottlogic.reactivegame.services.EmailService
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.annotation.Autowired
@@ -155,6 +156,8 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     private lateinit var userColourUpdate: UserColourUpdate
     @Autowired
     private lateinit var objectMapper: ObjectMapper
+    @Autowired
+    private lateinit var emailService: EmailService
 
     fun collision(existing: Position, toDraw: Position): Boolean {
         synchronized(safeDots.collidees) {
@@ -292,6 +295,8 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
 
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
+
+        emailService.sendEmail()
 
         val cookie = session.handshakeInfo.headers.getValue("Cookie").map { cookie ->
             val arr = cookie.split("=")

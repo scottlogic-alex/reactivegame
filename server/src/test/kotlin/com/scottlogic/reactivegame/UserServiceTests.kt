@@ -14,7 +14,7 @@ import java.util.*
 
 
 @RunWith(SpringRunner::class)
-@SpringBootTest()
+@SpringBootTest
 class UserServiceTests {
 
 	@Autowired
