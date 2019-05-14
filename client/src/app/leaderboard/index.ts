@@ -1,1 +1,1 @@
-export { LeaderboardModule } from "./leaderboard.module";
+export * from "./leaderboard.component";

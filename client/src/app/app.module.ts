@@ -18,6 +18,7 @@ import { AppComponent } from "./app.component";
 import { APP_RESOLVER_PROVIDERS } from "./app.resolver";
 import { AppState, InternalStateType } from "./app.service";
 import { HomeComponent } from "./home";
+import { RegisterComponent } from "./register";
 import { LeaderboardComponent } from "./leaderboard/leaderboard.component";
 import { NoContentComponent } from "./no-content";
 import { XLargeDirective } from "./home/x-large";
@@ -42,6 +43,7 @@ interface StoreType {
   declarations: [
     AppComponent,
     HomeComponent,
+    RegisterComponent,
     LeaderboardComponent,
     NoContentComponent,
     XLargeDirective
