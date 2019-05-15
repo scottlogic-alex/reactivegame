@@ -1,5 +1,6 @@
 package com.scottlogic.reactivegame
 
+import com.scottlogic.reactivegame.services.EmailService
 import com.scottlogic.reactivegame.services.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
@@ -47,6 +48,9 @@ class LolController {
 
     @Autowired
     private lateinit var userNameUpdate: UserNameUpdate
+
+    @Autowired
+    private lateinit var emailService: EmailService
 
     @ExperimentalUnsignedTypes
     private fun getColour(channels: UByteArray): String {
@@ -116,6 +120,12 @@ class LolController {
             }
         }
         response.headers.location = URI("http://ws00100:3000/register")
+    }
+
+    @PostMapping("/requestLink")
+    fun requestLink(@RequestBody email: String) {
+//        emailService.sendEmail(email)
+        println(email)
     }
 
     @GetMapping("/host/hostname")

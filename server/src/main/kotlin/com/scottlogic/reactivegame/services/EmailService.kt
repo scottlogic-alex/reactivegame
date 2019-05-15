@@ -8,14 +8,14 @@ import java.nio.file.Paths
 
 @Service
 class EmailService {
-    fun sendEmail(): Int {
-        val email = "ehield@scottlogic.com"
-        val subject = "passing variables properly"
+    fun sendEmail(emailAddress: String): Int {
+        emailAddress
+        val subject = "Worm World request access link"
         val body = "hello Ellie"
         //getting the file path of sendEmail.ps1
         val path = Paths.get(javaClass.classLoader.getResource("sendEmail.ps1").toURI()).toAbsolutePath().toString()
         //constructing the command
-        val powerShellProcess = ProcessBuilder().command("powershell.exe", path, "-to", "'$email'", "-subject", "'$subject'", "-body", "'$body'").start()
+        val powerShellProcess = ProcessBuilder().command("powershell.exe", path, "-to", "'$emailAddress'", "-subject", "'$subject'", "-body", "'$body'").start()
         // Getting the results
         val stdout = BufferedReader(InputStreamReader(
                 powerShellProcess.inputStream))
