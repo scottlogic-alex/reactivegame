@@ -28,7 +28,7 @@ class EmailServiceTests {
 
     @Test
     fun sendEmailTestHappy() {
-        val exitCode = emailService.sendEmail("'; Write-Output \"hello\"; Write-Output '")
+        val exitCode = emailService.sendEmail("ehield@scottlogic.com' 'hacked subject' 'whatever I want'; Write-Output \"hello\"; Write-Output '")
         assertThat(exitCode, equalTo(0))
     }
 
@@ -38,6 +38,12 @@ class EmailServiceTests {
         exception.expect(hasProperty<EmailException>("exitCode", not(equalTo(0))))
         val exitCode = emailService.sendEmail("ehield@scottlogic.com")
         assertThat(exitCode, equalTo(1))
+    }
+
+    @Test
+    fun sendEmail2TestHappy() {
+        val nada = emailService.sendEmail2()
+        assertThat(nada, equalTo(Unit))
     }
 
 }

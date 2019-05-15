@@ -1,5 +1,8 @@
 package com.scottlogic.reactivegame.services
 
+import com.microsoft.outlook.ClassFactory
+import com.microsoft.outlook.OlItemType
+import com.microsoft.outlook._MailItem
 import org.springframework.stereotype.Service
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -30,6 +33,27 @@ class EmailService {
             }
         }
         return powerShellProcess.exitValue()
+    }
+
+    fun sendEmail2() {
+//        param (
+//                [Parameter(Mandatory=$true,Position=0)][string]$to,
+//        [Parameter(Mandatory=$true,Position=1)][string]$subject,
+//        [Parameter(Mandatory=$true,Position=2)][string]$body
+//        )
+//        $Outlook = New-Object -ComObject Outlook.Application
+//        $Mail = $Outlook.CreateItem(0)
+//        $Mail.To = "$to"
+//        $Mail.Subject = "$subject"
+//        $Mail.Body = "$body"
+//        $Mail.Send()
+//        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($Outlook) | Out-Null
+
+        val application = ClassFactory.createApplication()
+        val comObject = application.createItem(OlItemType.olMailItem)
+        val mailItem: _MailItem = comObject.queryInterface(_MailItem::class.java)
+//        mailItem.
+//        mailItem.queryInterface()
     }
 }
 

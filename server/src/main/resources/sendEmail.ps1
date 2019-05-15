@@ -1,7 +1,7 @@
 param (
-    [Parameter(Mandatory=$true,Position=0)][string]$to,
-    [Parameter(Mandatory=$true,Position=1)][string]$subject,
-    [Parameter(Mandatory=$true,Position=2)][string]$body
+    [Parameter(Mandatory=$true)][string]$to,
+    [Parameter(Mandatory=$true)][string]$subject,
+    [Parameter(Mandatory=$true)][string]$body
 )
 $Outlook = New-Object -ComObject Outlook.Application
 $Mail = $Outlook.CreateItem(0)
