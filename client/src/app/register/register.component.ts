@@ -22,6 +22,7 @@ export class RegisterComponent {
   ]);
 
   emailPrefixValidator(control: FormControl) {
+    console.log(control);
     const regex: RegExp = /^[\w\d-]+$/g;
     if (!control.value) return null;
     const valid = regex.test(control.value);
@@ -35,7 +36,6 @@ export class RegisterComponent {
   }
 
   public requestEmail() {
-    console.log(this.registerForm.valid);
     if (this.registerForm.valid) {
       this.appService.requestEmail(this.registerForm.value).subscribe();
       this.registerForm.reset();
