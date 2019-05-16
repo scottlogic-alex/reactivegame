@@ -7,6 +7,7 @@ import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { FlexLayoutModule } from "@angular/flex-layout";
 import { CookieService } from "angular2-cookie/services/cookies.service";
 import { ColorPickerModule } from "ngx-color-picker";
+import { ReactiveFormsModule } from "@angular/forms";
 
 /*
  * Platform and Environment providers/directives/pipes
@@ -58,6 +59,7 @@ interface StoreType {
     FlexLayoutModule,
     HttpClientModule,
     ColorPickerModule,
+    ReactiveFormsModule,
     RouterModule.forRoot(ROUTES, {
       useHash: Boolean(history.pushState) === false,
       preloadingStrategy: PreloadAllModules

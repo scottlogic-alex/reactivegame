@@ -82,6 +82,12 @@ export class AppState {
       .get(`http://ws00100:8080/lol/login/token/${tokenId}`, this.httpOptions)
       .pipe();
   }
+
+  requestEmail(email: string) {
+    return this.http
+      .post(`http://ws00100:8080/lol/requestLink`, email, this.httpOptions)
+      .pipe();
+  }
 }
 
 interface SaveObject {

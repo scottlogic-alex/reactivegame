@@ -1,1 +1,6 @@
-<h1>register</h1>
+<h1>Request Login Email</h1>
+<form (ngSubmit)="requestEmail()">
+  <input placeholder="enter email" [formControl]="registerForm" />
+  <label>@scottlogic.com</label>
+  <button type="submit">Submit</button>
+</form>
