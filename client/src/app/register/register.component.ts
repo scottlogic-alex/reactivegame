@@ -15,14 +15,12 @@ import {
 export class RegisterComponent {
   constructor(private appService: AppState, private fb: FormBuilder) {}
 
-  //   public email: string;
   registerForm: FormControl = new FormControl("", [
     Validators.required,
     this.emailPrefixValidator
   ]);
 
   emailPrefixValidator(control: FormControl) {
-    console.log(control);
     const regex: RegExp = /^[\w\d-]+$/g;
     if (!control.value) return null;
     const valid = regex.test(control.value);

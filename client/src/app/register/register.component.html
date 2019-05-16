@@ -3,10 +3,12 @@
   <input placeholder="enter email" [formControl]="registerForm" />
   <label>@scottlogic.com</label>
   <button type="submit" [disabled]="!registerForm.valid">Submit</button>
-  <span *ngIf="registerForm.errors.required && !registerForm.pristine"
-    >this field is required</span
-  >
-  <span *ngIf="registerForm.errors.validateEmail"
-    >only alphanumeric characters and hypens permitted</span
-  >
+  <div *ngIf="registerform && registerForm.errors">
+    <span *ngIf="registerForm.errors.required && !registerForm.pristine"
+      >this field is required</span
+    >
+    <span *ngIf="registerForm.errors.validateEmail"
+      >only alphanumeric characters and hypens permitted</span
+    >
+  </div>
 </form>
