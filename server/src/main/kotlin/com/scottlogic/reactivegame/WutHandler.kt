@@ -156,8 +156,6 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     private lateinit var userColourUpdate: UserColourUpdate
     @Autowired
     private lateinit var objectMapper: ObjectMapper
-    @Autowired
-    private lateinit var emailService: EmailService
 
     fun collision(existing: Position, toDraw: Position): Boolean {
         synchronized(safeDots.collidees) {

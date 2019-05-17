@@ -61,12 +61,13 @@ class LolController {
     @GetMapping("/id")
     @ExperimentalUnsignedTypes
     fun getUserByIdUsingCookie(
-            @CookieValue(value = "id", defaultValue = "") id: String,
-            response: ServerHttpResponse,
-            request: ServerHttpRequest): Optional<User> {
-            val savedUser = userService.ensureUserExists(id)
-            if (id == "") response.addCookie(ResponseCookie.from("id", savedUser.get().id).path("/").build())
-        return savedUser
+            @CookieValue(value = "id", defaultValue = "") id: String, response: ServerHttpResponse): Optional<User> {
+        if (id != "") {
+            val user = userRepository.findById(id)
+            if (user.isPresent) return user
+        }
+        response.statusCode = HttpStatus.NOT_FOUND
+        return Optional.empty()
     }
 
     @PutMapping("/id/colour")
@@ -115,17 +116,34 @@ class LolController {
             val token = tokenOptional.get()
             if (token.expiry_time > Instant.now()) {
                 response.statusCode = HttpStatus.FOUND
-                response.headers.location = URI("http://ws00100:3000/")
+//                response.headers.location = URI("http://ws00100:3000/home")
+                response.headers.location = URI("http://localhost:3000/home")
+                response.addCookie(ResponseCookie.from("id", token.user!!.id).path("/").build())
                 return
             }
         }
-        response.headers.location = URI("http://ws00100:3000/register")
+        response.statusCode = HttpStatus.FOUND
+//        response.headers.location = URI("http://ws00100:3000/register")
+        response.headers.location = URI("http://localhost:3000/register")
+        return
     }
 
     @PostMapping("/requestLink")
-    fun requestLink(@RequestBody email: String) {
-//        emailService.sendEmail(email)
-        println(email)
+    fun requestLink(@RequestBody emailPrefix: String, response: ServerHttpResponse) {
+        val email = "$emailPrefix@scottlogic.com"
+        val user = userRepository.findByEmail(email)
+        var token: Token = Token()
+        if (user != null) {
+            token.user = user
+        } else {
+            val newUser = userService.createNewUser(email)
+            token.user = newUser
+        }
+        val savedToken = tokenRepository.save(token)
+        val body = "Welcome to Worm World!\n\nHere is your link to get started http://ws00100:8080/lol/login/token/${savedToken.id}\n\nSee you there!"
+        println(savedToken)
+        emailService.sendEmail(email, body)
+        return
     }
 
     @GetMapping("/host/hostname")

@@ -125,31 +125,9 @@ export class HomeComponent implements OnInit {
   }
 
   public save(): void {
-    // this.user.colour = this.color;
-    // this.user.name = this.username;
     this.appService
       .updateUserByCookieId(this.color, this.username, this.selectedHat.id)
       .subscribe();
-    // this.saveHat(this.selectedHat.id);
-    // this.saveName(this.username);
-    // this.saveColour(this.color);
-    // this.appService.getUserByCookieId().subscribe(user => {
-    //   console.log(user);
-    // });
-  }
-
-  private saveName(username: string): void {
-    this.user.name = username;
-    this.appService.updateUsernameByCookieId(username).subscribe();
-  }
-
-  private saveHat(hatId: string): void {
-    this.appService.setInUseHatByCookieId(hatId).subscribe();
-  }
-
-  private saveColour(colour: string): void {
-    this.user.colour = colour;
-    this.appService.updateColourByCookieId(colour).subscribe();
   }
 
   public selectHat(hat: IHat): void {
@@ -204,22 +182,27 @@ export class HomeComponent implements OnInit {
             ) as LoadedImages
         )
       )
-    ).subscribe(([user, keyedImages]: [IUser, LoadedImages]) => {
-      console.log(keyedImages);
-      this.user = user;
-      console.log(user);
-      this.color = user.colour;
-      this.username = user.name;
-      this.images = keyedImages;
-      this.drawWorm(user.colour);
-      let hat = user.items.find(
-        item => item.type == "Hat" && item.inUse == true
-      );
-      if (hat) {
-        this.selectedHat = hat;
-        this.drawCustom(assets[hat.name], keyedImages[hat.name]);
+    ).subscribe(
+      ([user, keyedImages]: [IUser, LoadedImages]) => {
+        console.log(keyedImages);
+        this.user = user;
+        console.log(user);
+        this.color = user.colour;
+        this.username = user.name;
+        this.images = keyedImages;
+        this.drawWorm(user.colour);
+        let hat = user.items.find(
+          item => item.type == "Hat" && item.inUse == true
+        );
+        if (hat) {
+          this.selectedHat = hat;
+          this.drawCustom(assets[hat.name], keyedImages[hat.name]);
+        }
+      },
+      err => {
+        console.error(err);
       }
-    });
+    );
   }
 }
 

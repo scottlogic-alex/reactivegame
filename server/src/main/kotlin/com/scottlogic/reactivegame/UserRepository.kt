@@ -6,6 +6,11 @@ import org.springframework.data.repository.CrudRepository
 import org.springframework.transaction.annotation.Transactional
 
 interface UserRepository: CrudRepository<User, String> {
+//    @Query(value = //language=JPAQL
+//    "select User where email = :email")
+    fun findByEmail(email: String): User?
+
+
     @Modifying
     @Transactional
     @Query(value = //language=JPAQL

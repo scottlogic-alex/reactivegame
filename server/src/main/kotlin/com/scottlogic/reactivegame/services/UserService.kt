@@ -18,11 +18,12 @@ class UserService(
                 .format(*channels.map(UByte::toInt).toTypedArray())
     }
 
-    fun createNewUser(): User {
+    fun createNewUser(email: String): User {
             // redirect user to request a link page
             val user = User(
                     name = "new user",
-                    colour = getColour(Random.nextUBytes(3))
+                    colour = getColour(Random.nextUBytes(3)),
+                    email = email
             )
             user.host = ""
             return userRepository.save(user)
@@ -31,7 +32,7 @@ class UserService(
     fun ensureUserExists(id: String): Optional<User> {
         var user: Optional<User>
         if (id == "") {
-            user = Optional.of(createNewUser())
+            user = Optional.of(createNewUser(""))
         }
         else user = userRepository.findById(id)
         return user

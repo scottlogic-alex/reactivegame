@@ -30,7 +30,8 @@ data class User(
         var current_points: Int = 0,
         @Column(columnDefinition = "TIMESTAMP")
         var last_activity: Instant = Instant.EPOCH,
-        var high_score: Int = 0
+        var high_score: Int = 0,
+        var email: String = ""
 ) {
         @PrePersist
         @PreUpdate
