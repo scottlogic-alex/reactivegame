@@ -9,9 +9,12 @@ export interface InternalStateType {
 
 @Injectable()
 export class AppState {
-  public _state: InternalStateType = {};
-
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    this.url = `${protocol}//${hostname}:8080/lol`;
+  }
+  private readonly url: string;
 
   httpOptions = {
     headers: new HttpHeaders({ "Content-Type": "application/json" }),
@@ -30,28 +33,26 @@ export class AppState {
   }
 
   getUserByCookieId(): Observable<IUser> {
-    return this.http
-      .get<IUser>(`http://ws00100:8080/lol/id`, this.httpOptions)
-      .pipe();
+    return this.http.get<IUser>(`${this.url}/id`, this.httpOptions).pipe();
   }
 
   updateColourByCookieId(colour: String): Observable<Object> {
     return this.http
-      .put(`http://ws00100:8080/lol/id/colour`, colour, this.httpOptions)
+      .put(`${this.url}/id/colour`, colour, this.httpOptions)
       .pipe();
   }
 
   updateUsernameByCookieId(username: String): Observable<Object> {
     if (username.length <= 30) {
       return this.http
-        .put(`http://ws00100:8080/lol/id/name`, username, this.httpOptions)
+        .put(`${this.url}/id/name`, username, this.httpOptions)
         .pipe();
     }
   }
 
   setInUseHatByCookieId(hatId: String): Observable<Object> {
     return this.http
-      .put(`http://ws00100:8080/lol/id/hats/`, hatId, this.httpOptions)
+      .put(`${this.url}/id/hats/`, hatId, this.httpOptions)
       .pipe();
   }
 
@@ -66,31 +67,29 @@ export class AppState {
       hatId: hatId
     };
     return this.http
-      .put(`http://ws00100:8080/lol/id/user/`, saveObject, this.httpOptions)
+      .put(`${this.url}/id/user/`, saveObject, this.httpOptions)
       .pipe();
   }
 
   getLeaderboard(): Observable<Object> {
-    return this.http
-      .get(`http://ws00100:8080/lol/highscores`, this.httpOptions)
-      .pipe();
+    return this.http.get(`${this.url}/highscores`, this.httpOptions).pipe();
   }
 
   loginWithToken(tokenId: string) {
     return this.http
-      .get(`http://ws00100:8080/lol/login/token/${tokenId}`, this.httpOptions)
+      .get(`${this.url}/login/token/${tokenId}`, this.httpOptions)
       .pipe();
   }
 
   requestEmail(email: string) {
     return this.http
-      .post(`http://ws00100:8080/lol/requestLink`, email, this.httpOptions)
+      .post(`${this.url}/requestLink`, email, this.httpOptions)
       .pipe();
   }
 
   validate(): Observable<boolean> {
     return this.http
-      .get<boolean>(`http://ws00100:8080/lol/validate`, this.httpOptions)
+      .get<boolean>(`${this.url}/validate`, this.httpOptions)
       .pipe();
   }
 }

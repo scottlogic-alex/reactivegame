@@ -115,24 +115,25 @@ class LolController {
     }
 
     @GetMapping("/login/token/{token_id}")
-    fun login(@PathVariable("token_id") tokenId: String, response: ServerHttpResponse) {
+    fun login(@PathVariable("token_id") tokenId: String, response: ServerHttpResponse, request: ServerHttpRequest) {
         val tokenOptional: Optional<Token> = tokenRepository.findById(tokenId)
+        val host = request.headers.host?.hostString ?: "localhost"
         if (tokenOptional.isPresent) {
             val token = tokenOptional.get()
             if (token.expiry_time > Instant.now()) {
                 response.statusCode = HttpStatus.FOUND
-                response.headers.location = URI("http://ws00100:3000/home")
-                response.addCookie(ResponseCookie.from("id", token.user!!.id).path("/").build())
+                response.headers.location = URI("http://$host:3000/home")
+                response.addCookie(ResponseCookie.from("id", token.user!!.id).domain(host).path("/").build())
                 return
             }
         }
         response.statusCode = HttpStatus.FOUND
-        response.headers.location = URI("http://ws00100:3000/register")
+        response.headers.location = URI("http://$host:3000/register")
         return
     }
 
     @PostMapping("/requestLink")
-    fun requestLink(@RequestBody emailPrefix: String, response: ServerHttpResponse) {
+    fun requestLink(@RequestBody emailPrefix: String, response: ServerHttpResponse, request: ServerHttpRequest) {
         val email = "$emailPrefix@scottlogic.com"
         val user = userRepository.findByEmail(email)
         var token: Token = Token()
@@ -143,7 +144,8 @@ class LolController {
             token.user = newUser
         }
         val savedToken = tokenRepository.save(token)
-        val body = "Welcome to Worm World!\n\nHere is your link to get started http://ws00100:8080/lol/login/token/${savedToken.id}\n\nSee you there!"
+        val host = request.headers.host?.hostString ?: "localhost"
+        val body = "Welcome to Worm World!\n\nHere is your link to get started http://$host:8080/lol/login/token/${savedToken.id}\n\nSee you there!"
         println(savedToken)
         emailService.sendEmail(email, body)
         return

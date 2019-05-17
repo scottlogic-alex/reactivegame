@@ -140,7 +140,7 @@ export class BarrelComponent implements OnInit, OnDestroy {
   public ngOnInit() {
     console.log("hello");
     const config: WebSocketSubjectConfig<string> = {
-      url: "ws://ws00100:8080/wut",
+      url: `ws://${window.location.hostname}:8080/wut`,
       deserializer: (e: MessageEvent) => e.data
     };
     this.clientWebSocket$ = webSocket(config);
