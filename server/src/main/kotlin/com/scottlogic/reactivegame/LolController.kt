@@ -59,7 +59,6 @@ class LolController {
     }
 
     @GetMapping("/id")
-    @ExperimentalUnsignedTypes
     fun getUserByIdUsingCookie(
             @CookieValue(value = "id", defaultValue = "") id: String, response: ServerHttpResponse): Optional<User> {
         if (id != "") {
@@ -68,6 +67,12 @@ class LolController {
         }
         response.statusCode = HttpStatus.NOT_FOUND
         return Optional.empty()
+    }
+
+    @GetMapping("/validate")
+    fun findIfUserExistsById(@CookieValue(value = "id", defaultValue = "")id: String): Boolean {
+        val user = userRepository.findById(id)
+        return user.isPresent
     }
 
     @PutMapping("/id/colour")
@@ -116,15 +121,13 @@ class LolController {
             val token = tokenOptional.get()
             if (token.expiry_time > Instant.now()) {
                 response.statusCode = HttpStatus.FOUND
-//                response.headers.location = URI("http://ws00100:3000/home")
-                response.headers.location = URI("http://localhost:3000/home")
+                response.headers.location = URI("http://ws00100:3000/home")
                 response.addCookie(ResponseCookie.from("id", token.user!!.id).path("/").build())
                 return
             }
         }
         response.statusCode = HttpStatus.FOUND
-//        response.headers.location = URI("http://ws00100:3000/register")
-        response.headers.location = URI("http://localhost:3000/register")
+        response.headers.location = URI("http://ws00100:3000/register")
         return
     }
 

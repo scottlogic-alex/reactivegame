@@ -2,7 +2,6 @@ import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Observable, Observer } from "rxjs";
 import { IUser } from "./user";
-import { CookieService } from "angular2-cookie";
 
 export interface InternalStateType {
   [key: string]: any;
@@ -12,7 +11,7 @@ export interface InternalStateType {
 export class AppState {
   public _state: InternalStateType = {};
 
-  constructor(private http: HttpClient, private cookieService: CookieService) {}
+  constructor(private http: HttpClient) {}
 
   httpOptions = {
     headers: new HttpHeaders({ "Content-Type": "application/json" }),
@@ -86,6 +85,12 @@ export class AppState {
   requestEmail(email: string) {
     return this.http
       .post(`http://ws00100:8080/lol/requestLink`, email, this.httpOptions)
+      .pipe();
+  }
+
+  validate(): Observable<boolean> {
+    return this.http
+      .get<boolean>(`http://ws00100:8080/lol/validate`, this.httpOptions)
       .pipe();
   }
 }

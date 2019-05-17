@@ -3,11 +3,16 @@ import { HomeComponent } from "./home";
 import { NoContentComponent } from "./no-content";
 import { LeaderboardComponent } from "./leaderboard/leaderboard.component";
 import { RegisterComponent } from "./register";
+import { RouteGuard } from "./route-guards.service";
 
 export const ROUTES: Routes = [
-  { path: "", component: HomeComponent },
-  { path: "home", component: HomeComponent },
-  { path: "barrel", loadChildren: "./+barrel#BarrelModule" },
+  { path: "", redirectTo: "/home", pathMatch: "full" },
+  { path: "home", component: HomeComponent, canActivate: [RouteGuard] },
+  {
+    path: "barrel",
+    canActivate: [RouteGuard],
+    loadChildren: "./+barrel#BarrelModule"
+  },
   { path: "leaderboard", component: LeaderboardComponent },
   { path: "register", component: RegisterComponent },
   { path: "**", component: NoContentComponent }

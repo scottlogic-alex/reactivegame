@@ -5,7 +5,6 @@ import { HttpClientModule } from "@angular/common/http";
 import { RouterModule, PreloadAllModules } from "@angular/router";
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { FlexLayoutModule } from "@angular/flex-layout";
-import { CookieService } from "angular2-cookie/services/cookies.service";
 import { ColorPickerModule } from "ngx-color-picker";
 import { ReactiveFormsModule } from "@angular/forms";
 
@@ -14,6 +13,7 @@ import { ReactiveFormsModule } from "@angular/forms";
  */
 import { environment } from "environments/environment";
 import { ROUTES } from "./app.routes";
+import { RouteGuard } from "./route-guards.service";
 // App is our top level component
 import { AppComponent } from "./app.component";
 import { APP_RESOLVER_PROVIDERS } from "./app.resolver";
@@ -75,6 +75,6 @@ interface StoreType {
   /**
    * Expose our Services and Providers into Angular's dependency injection.
    */
-  providers: [environment.ENV_PROVIDERS, APP_PROVIDERS, CookieService]
+  providers: [environment.ENV_PROVIDERS, APP_PROVIDERS, RouteGuard]
 })
 export class AppModule {}
