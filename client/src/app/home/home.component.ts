@@ -12,7 +12,6 @@ import {
   KeyedImage
 } from "../asset";
 import { forkJoin } from "rxjs";
-import { CookieService } from "angular2-cookie/core";
 import { map } from "rxjs/operators";
 
 @Component({
@@ -22,10 +21,7 @@ import { map } from "rxjs/operators";
   templateUrl: "./home.component.html"
 })
 export class HomeComponent implements OnInit {
-  constructor(
-    private appService: AppState,
-    private cookieService: CookieService
-  ) {}
+  constructor(private appService: AppState) {}
   public user: IUser = {
     name: "",
     id: "",
@@ -145,10 +141,6 @@ export class HomeComponent implements OnInit {
       type: "Hat"
     };
     this.selectHat(hat);
-  }
-
-  public getCookie(key: string) {
-    return this.cookieService.get(key);
   }
 
   public ngOnInit() {
