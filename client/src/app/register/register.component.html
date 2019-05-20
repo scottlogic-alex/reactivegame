@@ -1,14 +1,33 @@
 <h1>Request Login Email</h1>
-<form (ngSubmit)="requestEmail()">
+<h3>
+  Enter your scott logic email to receive a log in link for an existing or new
+  user account
+</h3>
+<form *ngIf="!formSent" (ngSubmit)="requestEmail()">
   <input placeholder="enter email" [formControl]="registerForm" />
   <label>@scottlogic.com</label>
   <button type="submit" [disabled]="!registerForm.valid">Submit</button>
-  <div *ngIf="registerform && registerForm.errors">
-    <span *ngIf="registerForm.errors.required && !registerForm.pristine"
-      >this field is required</span
-    >
-    <span *ngIf="registerForm.errors.validateEmail"
-      >only alphanumeric characters and hypens permitted</span
-    >
-  </div>
 </form>
+<div *ngIf="registerForm.errors">
+  <p
+    *ngIf="
+      (registerForm.touched || registerForm.dirty) &&
+      registerForm.errors.required
+    "
+  >
+    this field is required
+  </p>
+  <p *ngIf="registerForm.errors.inValidEmail">
+    only alphanumeric characters and hypens permitted
+  </p>
+</div>
+<span *ngIf="formSent">
+  request submitted -
+</span>
+<span *ngIf="formSent && emailSent">
+  please check your inbox for a worm world link!
+</span>
+<span *ngIf="formSent && !emailSent">
+  a worm world link previously sent to this user is still valid, please search
+  your inbox
+</span>

@@ -27,5 +27,6 @@
         <mapping class="com.scottlogic.reactivegame.User" />
         <mapping class="com.scottlogic.reactivegame.Item" />
         <mapping class="com.scottlogic.reactivegame.Hat" />
+        <mapping class="com.scottlogic.reactivegame.Token" />
     </session-factory>
 </hibernate-configuration>

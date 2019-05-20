@@ -1,19 +1,16 @@
-import { OnInit, Component } from "@angular/core";
+import { Component } from "@angular/core";
 import { AppState } from "app/app.service";
-import {
-  ValidatorFn,
-  AbstractControl,
-  FormBuilder,
-  Validators,
-  FormControl
-} from "@angular/forms";
+import { Validators, FormControl } from "@angular/forms";
 
 @Component({
   templateUrl: "./register.component.html",
   styleUrls: ["register.component.css"]
 })
 export class RegisterComponent {
-  constructor(private appService: AppState, private fb: FormBuilder) {}
+  constructor(private appService: AppState) {}
+
+  public formSent: boolean = false;
+  public emailSent: boolean = false;
 
   registerForm: FormControl = new FormControl("", [
     Validators.required,
@@ -27,15 +24,16 @@ export class RegisterComponent {
     return valid
       ? null
       : {
-          validateEmail: {
-            valid: false
-          }
+          inValidEmail: true
         };
   }
 
   public requestEmail() {
     if (this.registerForm.valid) {
-      this.appService.requestEmail(this.registerForm.value).subscribe();
+      this.formSent = true;
+      this.appService
+        .requestEmail(this.registerForm.value)
+        .subscribe(bool => (this.emailSent = bool));
       this.registerForm.reset();
     }
   }

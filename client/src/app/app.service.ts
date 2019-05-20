@@ -81,9 +81,9 @@ export class AppState {
       .pipe();
   }
 
-  requestEmail(email: string) {
+  requestEmail(email: string): Observable<boolean> {
     return this.http
-      .post(`${this.url}/requestLink`, email, this.httpOptions)
+      .post<boolean>(`${this.url}/requestLink`, email, this.httpOptions)
       .pipe();
   }
 

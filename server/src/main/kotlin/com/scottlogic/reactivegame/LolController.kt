@@ -133,10 +133,14 @@ class LolController {
     }
 
     @PostMapping("/requestLink")
-    fun requestLink(@RequestBody emailPrefix: String, response: ServerHttpResponse, request: ServerHttpRequest) {
+    fun requestLink(@RequestBody emailPrefix: String, response: ServerHttpResponse, request: ServerHttpRequest): Boolean {
         val email = "$emailPrefix@scottlogic.com"
         val user = userRepository.findByEmail(email)
-        var token: Token = Token()
+        if (user != null) {
+            val existingToken: Optional<Token> = tokenRepository.selectTokenByUser(user.id)
+            if (existingToken.isPresent) return false
+        }
+        var token = Token()
         if (user != null) {
             token.user = user
         } else {
@@ -146,9 +150,8 @@ class LolController {
         val savedToken = tokenRepository.save(token)
         val host = request.headers.host?.hostString ?: "localhost"
         val body = "Welcome to Worm World!\n\nHere is your link to get started http://$host:8080/lol/login/token/${savedToken.id}\n\nSee you there!"
-        println(savedToken)
         emailService.sendEmail(email, body)
-        return
+        return true
     }
 
     @GetMapping("/host/hostname")
