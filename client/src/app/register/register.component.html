@@ -4,30 +4,32 @@
   user account
 </h3>
 <form *ngIf="!formSent" (ngSubmit)="requestEmail()">
-  <input placeholder="enter email" [formControl]="registerForm" />
-  <label>@scottlogic.com</label>
-  <button type="submit" [disabled]="!registerForm.valid">Submit</button>
+  <div class="emailInput">
+    <input placeholder="enter email" [formControl]="registerForm" />
+    <label>@scottlogic.com</label>
+  </div>
+  <div *ngIf="registerForm.errors">
+    <p
+      class="errorMessage"
+      *ngIf="
+        (registerForm.touched || registerForm.dirty) &&
+        registerForm.errors.required
+      "
+    >
+      this field is required
+    </p>
+    <p class="errorMessage" *ngIf="registerForm.errors.inValidEmail">
+      only alphanumeric characters and hypens permitted
+    </p>
+  </div>
+  <button class="submit" type="submit" [disabled]="!registerForm.valid">
+    Submit
+  </button>
 </form>
-<div *ngIf="registerForm.errors">
-  <p
-    *ngIf="
-      (registerForm.touched || registerForm.dirty) &&
-      registerForm.errors.required
-    "
-  >
-    this field is required
-  </p>
-  <p *ngIf="registerForm.errors.inValidEmail">
-    only alphanumeric characters and hypens permitted
-  </p>
-</div>
-<span *ngIf="formSent">
-  request submitted -
+<span *ngIf="formSent && emailSent" class="submittedMessage">
+  request submitted - please check your inbox for a worm world link!
 </span>
-<span *ngIf="formSent && emailSent">
-  please check your inbox for a worm world link!
-</span>
-<span *ngIf="formSent && !emailSent">
+<span *ngIf="formSent && !emailSent" class="submittedMessage">
   a worm world link previously sent to this user is still valid, please search
   your inbox
 </span>

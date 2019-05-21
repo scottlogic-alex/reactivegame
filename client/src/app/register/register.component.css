@@ -1,0 +1,43 @@
+h1,
+h3 {
+  text-align: center;
+}
+.emailInput {
+  display: table;
+  margin: auto;
+  text-align: right;
+}
+
+.errorMessage {
+  color: red;
+  display: table;
+  margin: auto;
+  margin-top: 10px;
+}
+
+.submit {
+  display: table;
+  margin: auto;
+  margin-top: 20px;
+  background-color: #00bcd4;
+  color: #004149;
+  border-style: outset;
+  border-color: #00bcd4;
+  border-radius: 100px;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: bolder;
+  height: 30px;
+  width: 100px;
+}
+
+.submit[disabled] {
+  background-color: #475f63;
+  border-color: #005763;
+  color: rgb(135, 160, 154);
+}
+
+.submittedMessage {
+  display: table;
+  margin: auto;
+}
