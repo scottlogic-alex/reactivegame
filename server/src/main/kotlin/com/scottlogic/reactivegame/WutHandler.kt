@@ -2,7 +2,7 @@ package com.scottlogic.reactivegame
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.scottlogic.reactivegame.services.EmailService
+import com.scottlogic.reactivegame.services.JsonWebTokenService
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.annotation.Autowired
@@ -11,15 +11,14 @@ import org.springframework.web.reactive.socket.WebSocketHandler
 import org.springframework.web.reactive.socket.WebSocketMessage
 import org.springframework.web.reactive.socket.WebSocketSession
 import reactor.core.Disposable
-import reactor.core.publisher.*
-import java.util.*
 import reactor.core.publisher.Flux
+import reactor.core.publisher.FluxSink
+import reactor.core.publisher.Mono
 import java.sql.Timestamp
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalUnit
+import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
@@ -156,6 +155,8 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     private lateinit var userColourUpdate: UserColourUpdate
     @Autowired
     private lateinit var objectMapper: ObjectMapper
+    @Autowired
+    private lateinit var jwtService: JsonWebTokenService
 
     fun collision(existing: Position, toDraw: Position): Boolean {
         synchronized(safeDots.collidees) {
@@ -301,11 +302,12 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
         println(Timestamp(Date().time))
         println(cookie)
 
-        val user: Optional<User>
-        = if (cookie == null) {
-            Optional.empty()
-        } else {
-            userRepository.findById(cookie.value)
+        var user: Optional<User> = Optional.empty()
+        if (cookie != null) {
+            val userId = jwtService.getUserIdFromJWT(cookie.value)
+            if (userId != null) {
+                user = userRepository.findById(userId)
+            }
         }
 
         println(objectMapper.writeValueAsString(user))

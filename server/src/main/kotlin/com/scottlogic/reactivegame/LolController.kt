@@ -1,6 +1,7 @@
 package com.scottlogic.reactivegame
 
 import com.scottlogic.reactivegame.services.EmailService
+import com.scottlogic.reactivegame.services.JsonWebTokenService
 import com.scottlogic.reactivegame.services.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
@@ -12,8 +13,6 @@ import reactor.core.publisher.Mono
 import java.net.URI
 import java.time.Instant
 import java.util.*
-import kotlin.random.Random
-import kotlin.random.nextUBytes
 
 data class Lol(
         val lol: String
@@ -38,9 +37,6 @@ class LolController {
     private lateinit var userService: UserService
 
     @Autowired
-    private lateinit var hatRepository: HatRepository
-
-    @Autowired
     private lateinit var tokenRepository: TokenRepository
 
     @Autowired
@@ -52,18 +48,21 @@ class LolController {
     @Autowired
     private lateinit var emailService: EmailService
 
-    @ExperimentalUnsignedTypes
-    private fun getColour(channels: UByteArray): String {
-        return "#"+"%02X".repeat(3)
-                .format(*channels.map(UByte::toInt).toTypedArray())
-    }
+    @Autowired
+    private lateinit var jwtservice: JsonWebTokenService
 
     @GetMapping("/id")
     fun getUserByIdUsingCookie(
             @CookieValue(value = "id", defaultValue = "") id: String, response: ServerHttpResponse): Optional<User> {
         if (id != "") {
-            val user = userRepository.findById(id)
-            if (user.isPresent) return user
+        val valid: Boolean = jwtservice.validateToken(id)
+            if (valid) {
+                val userId = jwtservice.getUserIdFromJWT(id)
+                if (userId != null) {
+                    val user = userRepository.findById(userId)
+                    if (user.isPresent) return user
+                }
+            }
         }
         response.statusCode = HttpStatus.NOT_FOUND
         return Optional.empty()
@@ -71,8 +70,16 @@ class LolController {
 
     @GetMapping("/validate")
     fun findIfUserExistsById(@CookieValue(value = "id", defaultValue = "")id: String): Boolean {
-        val user = userRepository.findById(id)
-        return user.isPresent
+        val valid: Boolean = jwtservice.validateToken(id)
+        if (valid) {
+            val userId = jwtservice.getUserIdFromJWT(id)
+            var user: Optional<User> = Optional.empty()
+            if (userId != null) {
+                user = userRepository.findById(userId)
+            }
+            return user.isPresent
+        }
+        return false
     }
 
     @PutMapping("/id/colour")
@@ -123,7 +130,8 @@ class LolController {
             if (token.expiry_time > Instant.now()) {
                 response.statusCode = HttpStatus.FOUND
                 response.headers.location = URI("http://$host:3000/home")
-                response.addCookie(ResponseCookie.from("id", token.user!!.id).domain(host).path("/").build())
+                val cookie = jwtservice.generateToken(token.user!!.id)
+                response.addCookie(ResponseCookie.from("id", cookie).domain(host).path("/").build())
                 return
             }
         }
@@ -134,7 +142,8 @@ class LolController {
 
     @PostMapping("/requestLink")
     fun requestLink(@RequestBody emailPrefix: String, response: ServerHttpResponse, request: ServerHttpRequest): Boolean {
-        val email = "$emailPrefix@scottlogic.com"
+        if (!emailService.whitelist.contains(emailPrefix.toLowerCase())) return false
+        val email = "${emailPrefix.toLowerCase()}@scottlogic.com"
         val user = userRepository.findByEmail(email)
         if (user != null) {
             val existingToken: Optional<Token> = tokenRepository.selectTokenByUser(user.id)
