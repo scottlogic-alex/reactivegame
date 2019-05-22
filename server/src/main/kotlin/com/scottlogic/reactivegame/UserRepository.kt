@@ -4,12 +4,11 @@ import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
 import org.springframework.transaction.annotation.Transactional
+import java.util.*
 
 interface UserRepository: CrudRepository<User, String> {
-//    @Query(value = //language=JPAQL
-//    "select User where email = :email")
-    fun findByEmail(email: String): User?
 
+    fun findByEmail(email: String): Optional<User>
 
     @Modifying
     @Transactional
@@ -28,10 +27,6 @@ interface UserRepository: CrudRepository<User, String> {
     @Query(value = //language=JPAQL
     "update User u set high_score = :score where u.id = :id")
     fun updateUserHighScoreById (score: Int, id: String)
-
-//    @Query(value = //language=JPAQL
-//    "select u.high_score from users" )
-//    fun getHighScores(): Array<Any>
 
     @Query(value = "UPDATE firsttest.users SET colour = :colour WHERE id = :id", nativeQuery = true)
     fun updateUserSetColourById (colour: String, id: String)

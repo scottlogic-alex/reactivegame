@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service
 
 @Service
 class EmailService {
-    fun sendEmail(address: String, body: String) {
+    fun sendEmail(address: String, host: String?, tokenId: String) {
+        val host = host ?: "localhost"
+        val body = "Welcome to Worm World!\n\nHere is your link to get started http://$host:8080/lol/login/token/$tokenId\n\nSee you there!"
         val application: _Application = ClassFactory.createApplication()
         val comObject: Com4jObject = application.createItem(OlItemType.olMailItem)
         try {

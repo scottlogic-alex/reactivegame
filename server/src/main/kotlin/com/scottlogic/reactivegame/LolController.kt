@@ -54,49 +54,33 @@ class LolController {
     @GetMapping("/id")
     fun getUserByIdUsingCookie(
             @CookieValue(value = "id", defaultValue = "") id: String, response: ServerHttpResponse): Optional<User> {
-        if (id != "") {
-        val valid: Boolean = jwtservice.validateToken(id)
-            if (valid) {
-                val userId = jwtservice.getUserIdFromJWT(id)
-                if (userId != null) {
-                    val user = userRepository.findById(userId)
-                    if (user.isPresent) return user
-                }
-            }
-        }
-        response.statusCode = HttpStatus.NOT_FOUND
-        return Optional.empty()
+        val user = userService.getUserByJWT(id)
+        if (!user.isPresent) response.statusCode = HttpStatus.NOT_FOUND
+        return user
     }
 
     @GetMapping("/validate")
     fun findIfUserExistsById(@CookieValue(value = "id", defaultValue = "")id: String): Boolean {
-        val valid: Boolean = jwtservice.validateToken(id)
-        if (valid) {
-            val userId = jwtservice.getUserIdFromJWT(id)
-            var user: Optional<User> = Optional.empty()
-            if (userId != null) {
-                user = userRepository.findById(userId)
-            }
-            return user.isPresent
-        }
-        return false
+        return userService.getUserByJWT(id).isPresent
     }
 
     @PutMapping("/id/colour")
     fun updateColourById (@RequestBody colour: String, @CookieValue(value = "id", defaultValue = "") id: String) {
-        userColourUpdate.colourSink?.next(ColourUpdate(userId = id, colour = colour))
-        return userRepository.updateUserSetColourById(colour = colour, id = id)
+        val user = userService.getUserByJWT(id)
+        userColourUpdate.colourSink?.next(ColourUpdate(userId = user.get().id, colour = colour))
+        return userRepository.updateUserSetColourById(colour = colour, id = user.get().id)
     }
 
     @PutMapping("/id/name")
     fun updateUsernameById(@RequestBody username: String, @CookieValue(value = "id", defaultValue = "") id: String) {
-        userNameUpdate.nameSink?.next(NameUpdate(userName = username.trim(), userId = id))
-        return userRepository.updateUserSetUsernameById(username = username, id = id)
+        val user = userService.getUserByJWT(id)
+        userNameUpdate.nameSink?.next(NameUpdate(userName = username.trim(), userId = user.get().id))
+        return userRepository.updateUserSetUsernameById(username = username, id = user.get().id)
     }
 
     @PutMapping("/id/hats")
     fun setItemInUse(@RequestBody hatId: String,  @CookieValue(value = "id", defaultValue = "") id: String) {
-        val user = userRepository.findById(id).get()
+        val user = userService.getUserByJWT(id).get()
         user.items.filterIsInstance<Hat>().forEach { it.inUse = false }
         if (hatId != "noHat") {
             user.items.filterIsInstance<Hat>().find { it.id == hatId }?.inUse = true
@@ -106,7 +90,7 @@ class LolController {
 
     @PutMapping("/id/user")
     fun updateUser(@RequestBody saveObject: SaveObject, @CookieValue(value = "id", defaultValue = "") id: String) {
-        val user: User = userRepository.findById(id).get()
+        val user = userService.getUserByJWT(id).get()
         user.items.filterIsInstance<Hat>().forEach { it.inUse = false }
         if (saveObject.hatId != "noHat") {
             user.items.filterIsInstance<Hat>().find { it.id == saveObject.hatId }?.inUse = true
@@ -144,22 +128,20 @@ class LolController {
     fun requestLink(@RequestBody emailPrefix: String, response: ServerHttpResponse, request: ServerHttpRequest): Boolean {
         if (!emailService.whitelist.contains(emailPrefix.toLowerCase())) return false
         val email = "${emailPrefix.toLowerCase()}@scottlogic.com"
-        val user = userRepository.findByEmail(email)
-        if (user != null) {
-            val existingToken: Optional<Token> = tokenRepository.selectTokenByUser(user.id)
-            if (existingToken.isPresent) return false
-        }
-        var token = Token()
-        if (user != null) {
-            token.user = user
+        val userSearch: Optional<User> = userRepository.findByEmail(email)
+        val user: User
+        if (userSearch.isPresent) {
+            user = userSearch.get()
+            val validToken: Optional<Token> = tokenRepository.selectTokenByUser(user.id)
+            if (validToken.isPresent) return false
         } else {
-            val newUser = userService.createNewUser(email)
-            token.user = newUser
+            user = userService.createNewUser(email)
         }
+        val token = Token()
+        token.user = user
         val savedToken = tokenRepository.save(token)
-        val host = request.headers.host?.hostString ?: "localhost"
-        val body = "Welcome to Worm World!\n\nHere is your link to get started http://$host:8080/lol/login/token/${savedToken.id}\n\nSee you there!"
-        emailService.sendEmail(email, body)
+        val host: String? = request.headers.host?.hostString
+        emailService.sendEmail(email, host, savedToken.id!!)
         return true
     }
 

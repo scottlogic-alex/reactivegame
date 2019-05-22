@@ -9,7 +9,8 @@ import kotlin.random.nextUBytes
 
 @Service
 class UserService(
-        private val userRepository: UserRepository
+        private val userRepository: UserRepository,
+        private val jwtservice: JsonWebTokenService
 ) {
 
     @ExperimentalUnsignedTypes
@@ -35,6 +36,20 @@ class UserService(
         }
         else user = userRepository.findById(id)
         return user
+    }
+
+    fun getUserByJWT(token: String): Optional<User> {
+        if (token != "") {
+            val valid: Boolean = jwtservice.validateToken(token)
+            if (valid) {
+                val userId = jwtservice.getUserIdFromJWT(token)
+                if (userId != null) {
+                    val user = userRepository.findById(userId)
+                    if (user.isPresent) return user
+                }
+            }
+        }
+        return Optional.empty()
     }
 
 }
