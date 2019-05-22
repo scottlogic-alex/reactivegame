@@ -23,7 +23,6 @@ data class User(
         var id: String = "",
         var name: String,
         var colour: String,
-        var host: String = "",
         @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], targetEntity = Item::class)
         @JsonManagedReference
         var items: List<Item> = mutableListOf(),

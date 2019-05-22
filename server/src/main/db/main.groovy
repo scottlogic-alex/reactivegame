@@ -65,6 +65,10 @@ databaseChangeLog {
     }
   }
 
+  changeSet(id: '1557320751826-6', author: 'ehield') {
+    dropColumn(tableName: 'users', columnName: 'host')
+  }
+
 
 
 }

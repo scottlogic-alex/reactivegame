@@ -25,7 +25,6 @@ class UserService(
                     colour = getColour(Random.nextUBytes(3)),
                     email = email
             )
-            user.host = ""
             return userRepository.save(user)
         }
 
