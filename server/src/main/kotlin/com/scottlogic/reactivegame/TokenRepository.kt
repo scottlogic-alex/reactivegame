@@ -10,4 +10,8 @@ interface TokenRepository: CrudRepository<Token, String> {
     "Select t from Token t where t.user.id = :userId and t.expiry_time > current_time " )
     fun selectTokenByUser(userId: String) : Optional<Token>
 
+    @Query(value = //language=HQL
+    "Select t from Token t where t.id = :id and t.expiry_time > current_time " )
+    fun selectTokenById(id: String) : Optional<Token>
+
 }

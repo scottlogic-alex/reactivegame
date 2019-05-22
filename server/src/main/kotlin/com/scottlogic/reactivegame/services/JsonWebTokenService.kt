@@ -15,7 +15,7 @@ class JsonWebTokenService {
     @Value("\${app.jwtExpirationInMs}")
     private val jwtExpirationInMs: Int = 0
 
-    fun generateToken(userId: String): String {
+    fun generateCookieToken(userId: String): String {
 
         val now = Date()
         val expiryDate = Date(now.time + jwtExpirationInMs)

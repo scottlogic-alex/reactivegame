@@ -11,7 +11,6 @@ import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
 import java.net.URI
-import java.time.Instant
 import java.util.*
 
 data class Lol(
@@ -78,26 +77,10 @@ class LolController {
         return userRepository.updateUserSetUsernameById(username = username, id = user.get().id)
     }
 
-    @PutMapping("/id/hats")
-    fun setItemInUse(@RequestBody hatId: String,  @CookieValue(value = "id", defaultValue = "") id: String) {
-        val user = userService.getUserByJWT(id).get()
-        user.items.filterIsInstance<Hat>().forEach { it.inUse = false }
-        if (hatId != "noHat") {
-            user.items.filterIsInstance<Hat>().find { it.id == hatId }?.inUse = true
-        }
-        userRepository.save(user)
-    }
-
     @PutMapping("/id/user")
     fun updateUser(@RequestBody saveObject: SaveObject, @CookieValue(value = "id", defaultValue = "") id: String) {
         val user = userService.getUserByJWT(id).get()
-        user.items.filterIsInstance<Hat>().forEach { it.inUse = false }
-        if (saveObject.hatId != "noHat") {
-            user.items.filterIsInstance<Hat>().find { it.id == saveObject.hatId }?.inUse = true
-        }
-        user.colour = saveObject.colour
-        user.name = saveObject.username
-        userRepository.save(user)
+        userService.updateUser(user, saveObject.hatId, saveObject.colour, saveObject.username)
     }
 
     @GetMapping("/highscores")
@@ -107,19 +90,17 @@ class LolController {
 
     @GetMapping("/login/token/{token_id}")
     fun login(@PathVariable("token_id") tokenId: String, response: ServerHttpResponse, request: ServerHttpRequest) {
-        val tokenOptional: Optional<Token> = tokenRepository.findById(tokenId)
+        val tokenOptional: Optional<Token> = tokenRepository.selectTokenById(tokenId)
         val host = request.headers.host?.hostString ?: "localhost"
         if (tokenOptional.isPresent) {
-            val token = tokenOptional.get()
-            if (token.expiry_time > Instant.now()) {
+            val token: Token = tokenOptional.get()
                 response.statusCode = HttpStatus.FOUND
                 response.headers.location = URI("http://$host:3000/home")
-                val cookie = jwtservice.generateToken(token.user!!.id)
+                val cookie = jwtservice.generateCookieToken(token.user!!.id)
                 response.addCookie(ResponseCookie.from("id", cookie).domain(host).path("/").build())
                 return
-            }
         }
-        response.statusCode = HttpStatus.FOUND
+        response.statusCode = HttpStatus.TEMPORARY_REDIRECT
         response.headers.location = URI("http://$host:3000/register")
         return
     }

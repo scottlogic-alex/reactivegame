@@ -16,7 +16,7 @@ class JWTServiceTests {
 
     @Test
     fun generateJWT() {
-        val token = jwtService.generateToken("FAKEUSER")
+        val token = jwtService.generateCookieToken("FAKEUSER")
         println(token)
     }
 

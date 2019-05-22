@@ -50,12 +50,6 @@ export class AppState {
     }
   }
 
-  setInUseHatByCookieId(hatId: String): Observable<Object> {
-    return this.http
-      .put(`${this.url}/id/hats/`, hatId, this.httpOptions)
-      .pipe();
-  }
-
   updateUserByCookieId(
     colour: string,
     username: string,
