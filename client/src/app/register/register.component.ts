@@ -10,7 +10,8 @@ export class RegisterComponent {
   constructor(private appService: AppState) {}
 
   public formSent: boolean = false;
-  public emailSent: boolean = false;
+  public formVisible: boolean = true;
+  public displayMessage: string = "";
 
   registerForm: FormControl = new FormControl("", [
     Validators.required,
@@ -31,10 +32,36 @@ export class RegisterComponent {
   public requestEmail() {
     if (this.registerForm.valid) {
       this.formSent = true;
-      this.appService
-        .requestEmail(this.registerForm.value)
-        .subscribe(bool => (this.emailSent = bool));
-      this.registerForm.reset();
+      this.appService.requestEmail(this.registerForm.value).subscribe(msg => {
+        switch (msg.payload) {
+          case "INVALID_REQUEST": {
+            this.displayMessage =
+              "The email address submitted is invalid, please check for typos and try again";
+            break;
+          }
+          case "NEW_TOKEN": {
+            this.displayMessage =
+              "Welcome back! A link has been sent to your email";
+            this.formVisible = false;
+            this.registerForm.reset();
+            break;
+          }
+          case "TOKEN_EXISTS": {
+            this.displayMessage =
+              "A token previously sent to this email address is still valid, please search your inbox";
+            this.formVisible = false;
+            this.registerForm.reset();
+            break;
+          }
+          case "NEW_USER": {
+            this.displayMessage =
+              "Welcome to worm world new user! A link has been sent to your email";
+            this.formVisible = false;
+            this.registerForm.reset();
+            break;
+          }
+        }
+      });
     }
   }
 }

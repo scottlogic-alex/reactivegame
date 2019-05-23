@@ -3,7 +3,7 @@
   Enter your scott logic email to receive a log in link for an existing or new
   user account
 </h3>
-<form *ngIf="!formSent" (ngSubmit)="requestEmail()">
+<form *ngIf="formVisible" (ngSubmit)="requestEmail()">
   <div class="emailInput">
     <input placeholder="enter email" [formControl]="registerForm" />
     <label>@scottlogic.com</label>
@@ -26,10 +26,6 @@
     Submit
   </button>
 </form>
-<span *ngIf="formSent && emailSent" class="submittedMessage">
-  request submitted - please check your inbox for a worm world link!
-</span>
-<span *ngIf="formSent && !emailSent" class="submittedMessage">
-  a worm world link previously sent to this user is still valid, please search
-  your inbox
+<span *ngIf="formSent" class="submittedMessage">
+  {{ displayMessage }}
 </span>

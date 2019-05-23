@@ -75,9 +75,9 @@ export class AppState {
       .pipe();
   }
 
-  requestEmail(email: string): Observable<boolean> {
+  requestEmail(email: string): Observable<ResponseMessage> {
     return this.http
-      .post<boolean>(`${this.url}/requestLink`, email, this.httpOptions)
+      .post<ResponseMessage>(`${this.url}/requestLink`, email, this.httpOptions)
       .pipe();
   }
 
@@ -92,4 +92,8 @@ interface SaveObject {
   colour: string;
   username: string;
   hatId: string;
+}
+
+export interface ResponseMessage {
+  payload: string;
 }

@@ -23,6 +23,14 @@ data class SaveObject(
         val hatId: String
 )
 
+enum class Messages {
+    INVALID_REQUEST, TOKEN_EXISTS, NEW_TOKEN, NEW_USER
+}
+
+data class MessageObject(
+        var payload: Messages
+)
+
 @RestController
 @RequestMapping("/lol")
 class LolController {
@@ -106,24 +114,25 @@ class LolController {
     }
 
     @PostMapping("/requestLink")
-    fun requestLink(@RequestBody emailPrefix: String, response: ServerHttpResponse, request: ServerHttpRequest): Boolean {
-        if (!emailService.whitelist.contains(emailPrefix.toLowerCase())) return false
+    fun requestLink(@RequestBody emailPrefix: String, response: ServerHttpResponse, request: ServerHttpRequest): MessageObject {
+        if (!emailService.whitelist.contains(emailPrefix.toLowerCase())) return MessageObject(payload = Messages.INVALID_REQUEST)
         val email = "${emailPrefix.toLowerCase()}@scottlogic.com"
         val userSearch: Optional<User> = userRepository.findByEmail(email)
         val user: User
+        var returnMessage = MessageObject(payload = Messages.NEW_TOKEN)
         if (userSearch.isPresent) {
             user = userSearch.get()
-            val validToken: Optional<Token> = tokenRepository.selectTokenByUser(user.id)
-            if (validToken.isPresent) return false
+            if(tokenRepository.selectTokenByUser(user.id).isPresent) return MessageObject(payload = Messages.TOKEN_EXISTS)
         } else {
             user = userService.createNewUser(email)
+            returnMessage.payload = Messages.NEW_USER
         }
         val token = Token()
         token.user = user
         val savedToken = tokenRepository.save(token)
         val host: String? = request.headers.host?.hostString
         emailService.sendEmail(email, host, savedToken.id!!)
-        return true
+        return returnMessage
     }
 
     @GetMapping("/host/hostname")
