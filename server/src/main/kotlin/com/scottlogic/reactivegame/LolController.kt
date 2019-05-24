@@ -3,15 +3,24 @@ package com.scottlogic.reactivegame
 import com.scottlogic.reactivegame.services.EmailService
 import com.scottlogic.reactivegame.services.JsonWebTokenService
 import com.scottlogic.reactivegame.services.UserService
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseCookie
 import org.springframework.http.server.reactive.ServerHttpRequest
 import org.springframework.http.server.reactive.ServerHttpResponse
+import org.springframework.stereotype.Component
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
 import java.net.URI
 import java.util.*
+import java.util.function.Function
+
+@Component
+class LoginCounter(val registry: MeterRegistry) {
+    val coolMap: MutableMap<String, Counter> = mutableMapOf()
+}
 
 data class Lol(
         val lol: String
@@ -58,11 +67,22 @@ class LolController {
     @Autowired
     private lateinit var jwtservice: JsonWebTokenService
 
+//    @Autowired
+//    private lateinit var registry: MeterRegistry
+
+    @Autowired
+    private lateinit var loginCounter: LoginCounter
+
     @GetMapping("/id")
     fun getUserByIdUsingCookie(
             @CookieValue(value = "id", defaultValue = "") id: String, response: ServerHttpResponse): Optional<User> {
         val user = userService.getUserByJWT(id)
-        if (!user.isPresent) response.statusCode = HttpStatus.NOT_FOUND
+        if (user.isPresent)  {
+            val counter = loginCounter.coolMap.computeIfAbsent(user.get().id) { loginCounter.registry.counter("test", "user", user.get().email.removeSuffix("@scottlogic.com") ) }
+            counter.increment()
+        } else {
+            response.statusCode = HttpStatus.NOT_FOUND
+        }
         return user
     }
 
