@@ -91,5 +91,6 @@ class EmailService {
             "thayden",
             "thull",
             "thall",
-            "wsalt")
+            "wsalt",
+            "testrubbish")
 }
