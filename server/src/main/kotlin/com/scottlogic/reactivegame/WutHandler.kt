@@ -300,10 +300,14 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
 
     @ExperimentalUnsignedTypes
     override fun handle(session: WebSocketSession): Mono<Void> {
-        val cookie = session.handshakeInfo.headers.getValue("Cookie").toString().removePrefix("[").removeSuffix("]").split(";").map { cookie ->
+        val cookieStrings = session.handshakeInfo.headers.getValue("Cookie").toString().removePrefix("[").removeSuffix("]").split(";")
+
+        val cookies = cookieStrings.map { cookie ->
             val arr = cookie.split("=")
             Cookie(key = arr[0], value = arr[1])
-        }.find { cookiePair -> cookiePair.key == "id" }
+        }
+
+        val cookie = cookies.find { cookiePair -> cookiePair.key == "id" }
 
         println(Timestamp(Date().time))
         println(cookie)
