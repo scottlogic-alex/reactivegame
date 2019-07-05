@@ -191,9 +191,9 @@ export class BarrelComponent implements OnInit, OnDestroy {
             playerStates: gameState.playerStates
           };
           let bang = gameState.recent;
+          this.gameStates$.next(game);
           this.apples$.next(gameState.apple);
           this.hats$.next(gameState.hat);
-          this.gameStates$.next(game);
           if (bang.x !== -100 && bang.y !== -100) {
             this.collision$.next({ position: bang });
           }

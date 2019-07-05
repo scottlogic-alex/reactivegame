@@ -1,6 +1,7 @@
 package com.scottlogic.reactivegame
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.scottlogic.reactivegame.services.JsonWebTokenService
 import io.micrometer.core.instrument.Counter
@@ -67,6 +68,11 @@ data class Cookie (
         val key: String,
         val value: String
 )
+
+@Component
+class WiggleCounter(val registry: MeterRegistry) {
+    val coolMap: MutableMap<String, Counter> = mutableMapOf()
+}
 
 @Component
 class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
@@ -161,8 +167,7 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
     @Autowired
     private lateinit var jwtService: JsonWebTokenService
     @Autowired
-    private lateinit var registry: MeterRegistry
-    private lateinit var counter: Counter
+    private lateinit var wiggleCounter: WiggleCounter
 
     fun collision(existing: Position, toDraw: Position): Boolean {
         synchronized(safeDots.collidees) {
@@ -354,12 +359,12 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
 
         synchronized(gameState.playerStates) {
             gameState.playerStates += thisPlayerState
-//            this.counter.increment()
         }
         } else {
             println("throwing error, cannot find user with cookie id in database")
             return(Mono.error(Throwable("user not found")))
         }
+        val counter = wiggleCounter.coolMap.computeIfAbsent(user.get().id) { wiggleCounter.registry.counter("wiggles", "user", user.get().email.removeSuffix("@scottlogic.com"))}
 
         sink?.next(Unit)
 
@@ -380,14 +385,13 @@ class WutHandler: WebSocketHandler, InitializingBean, DisposableBean {
                                 val (x, y) = find.destructured
                                 thisPlayerState.mousePosition.x = x.toInt()
                                 thisPlayerState.mousePosition.y = y.toInt()
-                                var currentCoordinate: Position
-                                if (thisPlayerState.positions.size > 0) {
-                                    currentCoordinate = calculatePosition(thisPlayerState)
-                                }
-                                else {
-                                    currentCoordinate = thisPlayerState.mousePosition
+                                val currentCoordinate: Position = if (thisPlayerState.positions.size > 0) {
+                                    calculatePosition(thisPlayerState)
+                                } else {
+                                    thisPlayerState.mousePosition
                                 }
                                 updatePositions(thisPlayerState, currentCoordinate)
+                                counter.increment()
                             }
                             it.payloadAsText
                         }
